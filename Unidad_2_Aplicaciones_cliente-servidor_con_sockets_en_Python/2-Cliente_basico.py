@@ -28,8 +28,8 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print('socket creado')
 
 # Definimos el host de destino, que puede ser una URL o una dirección IP
-# target_host = "www.google.com" 
-target_host = "142.250.200.100"  # Dirección IP de Google
+target_host = "www.google.com" 
+# target_host = "142.250.200.100"  # Dirección IP de Google
 
 # Definimos el puerto de destino, en este caso el puerto 80 para HTTP
 target_port = 80
