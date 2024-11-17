@@ -365,10 +365,258 @@ Para ello, realizamos una solicitud HTTP con requests y luego analizamos el cont
     - Genera una estructura de árbol con todos los elementos del documentos parseado.
     - Permite buscar de una forma sencilla elementos HTML, tales como enlaces, formularios o cualquier etiqueta HTML.
 
-    - Para poder utilizarla hay que instalar el módulo específico que lo podemos encontrar en el repositorio ofical.
-        - https://www.crummy.com/software/BeautifulSoup/
-        - https://pypi.org/project/beautifulsoup4/
+- Para poder utilizarla hay que instalar el módulo específico que lo podemos encontrar en el repositorio ofical.
+    - https://www.crummy.com/software/BeautifulSoup/
+    - https://pypi.org/project/beautifulsoup4/
 
-        ```bash
-        pip install beautifulsoup4
+    ```bash
+    pip install beautifulsoup4
+    ```
+
+- Una vez instalado, el nombre del paquete es `bs4` y se puede importar de la siguiente manera:
+    ```python
+    from bs4 import BeautifulSoup
+    ```
+
+- Para poder realizar operaciones con un documento HTML, es necesario crear un objeto a partir de la clase `BeautifulSoup` ingresando un objeto de tipo `str` que contiene el contenido del documento HTML y seleccionando el tipo de analizador que se utilizará como según parámetro:
+
+    ```python
+    bs4.BeautifulSoup(<tipo de objeto>, <tipo de analizador>)
+    ```
+
+- Para crear una instancia de BeutifulSoup es necesario pasar por parámetro el contenido del documento HTML y el parser que queremos utilizar(xlm, html5lib, etc.).
+
+    ```python	
+    # bs = BeautifulSoup(html_content, parser)
+    bs = BeautifulSoup(html_content, 'lxml')
+    ```
+
+- De esta forma, conseugimos crear una instancia de la clase `BeautifulSoup`, pasando como parámetros el contenido HTML de la página y parser a utilizar.
+
+- En el objeto `bs` tenemos toda la información para navefgar por el documento y acceder a cada una de las etiquetas que se encuentran incluidas en él.
+
+- Por ejemplo, si queremos **acceder a la etiqueta `<title>`** podríamos acceder mediante `bs.title`.
+
+- [Código de ejemplo](/Unidad_6_Webscraping_con_Python/9-BeautifulSoup.py)
+
+### `Método find_all()` de BeutifulSoup
+
+- Una característica interesante de la librería es que permite buscar elementos concretos en la estructura dl documento, de esta forma, podemos buscar etiquetas meta, formularios, enlaces,etc.
+
+    - `bs.find_all(patron_busqueda)`: Este método nos permite encontrar todos los elementos HTML de un tipo determinado y nos devuelve una lista de tags que coincidan con el patrón de búsqueda.
+
+        ```python
+        meta_tags = bs.find_all("meta")
+        for tag in meta_tags:
+        print(tag)
         ```
+        ```python
+        form_tags = bs.find_all("form")
+        for form in form_tags:
+        print(form)
+        ```
+        ```python
+        link_tags = bs.find_all("a")
+        for link in link_tags:
+            print(link)
+        ```
+- Por ejemplo, podríamos extraer el contenido de determinadas etiquetas html. En el siguiente ejemplo estamos extrayendo las etiquetas `h2`  que contienen una determinada clase de estilos.
+
+    - [Código de ejemplo](/Unidad_6_Webscraping_con_Python/10-BeautifulSoup_find_h2.py)
+
+    ```python
+    import requests
+    from bs4 import BeautifulSoup
+    
+    html = requests.get("https://www.python.org/")
+    res = BeautifulSoup(html.text,"html.parser")
+    tags = res.findAll("h2", {"class": "widget-title"})
+
+    for tag in tags:
+        print(tag.getText())
+    ```
+
+    - Resultado:
+        ```
+        Get Started
+        Download
+        Docs
+        Jobs
+        Latest News
+        Upcoming Events
+        Success Stories
+        Use Python for…
+
+        >>> Python Software Foundation
+        ```
+
+#### Ejercicio: Extración de nombre de dominio con BeutifulSoup
+
+- [Código de ejemplo](/Unidad_6_Webscraping_con_Python/11-BeautifulSoup_find_domain.py)
+
+- Resultado:
+    ```
+    Dominio alojado en el mismo servidor: Domain
+    Dominio alojado en el mismo servidor: pyfun.club
+    Dominio alojado en el mismo servidor: pypi.io
+    Dominio alojado en el mismo servidor: pypi.org
+    Dominio alojado en el mismo servidor: python.org
+    Dominio alojado en el mismo servidor: pythonhosted.org
+    Dominio alojado en el mismo servidor: sabrinaforever.com
+    ```
+
+#### Extracción de etiquetas meta
+
+- [Código de ejemplo](/Unidad_6_Webscraping_con_Python/12-BeautifulSoup_find_meta.py)
+
+    ```
+    Introduzca url:www.python.org
+    <meta charset="utf-8"/>
+    <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+    <meta content="Python.org" name="application-name"/>
+    <meta content="The official home of the Python Programming Language" name="msapplication-tooltip"/>
+    The official home of the Python Programming Language
+    <meta content="Python.org" name="apple-mobile-web-app-title"/>
+    <meta content="yes" name="apple-mobile-web-app-capable"/>
+    <meta content="black" name="apple-mobile-web-app-status-bar-style"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta content="True" name="HandheldFriendly"/>
+    <meta content="telephone=no" name="format-detection"/>
+    <meta content="on" http-equiv="cleartype"/>
+    <meta content="false" http-equiv="imagetoolbar"/>
+    <meta content="/static/metro-icon-144x144.png" name="msapplication-TileImage"/>
+    ...
+    ```
+
+### Extracción de contenido mediante expresion regulares
+
+- Podemos usar el paquete `re` para identificar patrones comunes como correos electrónicos, y URLS.
+
+- Con BeautifulSoup, podemos especificar patrones de expresión regular para que coincidan con etiquetas específicas.
+
+- [Código de ejemplo](/Unidad_6_Webscraping_con_Python/13-BeautifulSoup_find_url_regular_expression.py)
+
+    - Resultado:
+        ```
+        Introduzca la URL: https://www.amazon.es/gp/help/customer/display.html?nodeId=GF4WKPX3G65RNNRJ
+        Correos electrónicos encontrados:
+        clientes@amazon.es
+        ```
+        ```
+        Introduzca la URL: https://www.iana.org/contact
+        Correos electrónicos encontrados:
+        iana@iana.org
+        ```
+
+### Ejercicio: Extracción de comentarios de código fuernte html con el módulo `BeautifulSoup`
+
+- Un problema de seguridad común es causado por las buenas prácticas de programación.
+- Durante la fase de desarrollo de las app web, los desarrolladores comentarán su código. Sin embargo, cuando la aplicación web está lista para implementarse en un entorno de producción, es una buena práctica wliminar todos estos comentarios, ya que pueden resultar útiles para un atacante.
+
+- Este script utilizará una combinacion de requests y BeutifulSoup para buscar comentarios en una URL, así como buscar enlaces en la página y buscar también en las URL posteriores para comentarios.
+
+- La técnica de seguir enlacer desde una página y analizar esas URLs es conocida como **spidering**.
+
+
+- [Código de ejemplo](/Unidad_6_Webscraping_con_Python/14-BeautifulSoup_find_comments.py)
+
+    - Resultado:
+        ```
+        Comentarios en el dominio: https://www.clusterticgalicia.com/
+        Global site tag (gtag.js) - Google Analytics 
+        Meta Pixel Code 
+        End Meta Pixel Code 
+        Google tag (gtag.js) 
+        Latest compiled and minified CSS 
+        Exception 'NoneType' object is not subscriptable
+        Exception 'NoneType' object is not subscriptable
+        Exception 'NoneType' object is not subscriptable
+        Exception 'NoneType' object is not subscriptable
+        Comentarios en la página: https://www.clusterticgalicia.com//login
+        Global site tag (gtag.js) - Google Analytics 
+        Meta Pixel Code 
+        End Meta Pixel Code 
+        Google tag (gtag.js) 
+        Latest compiled and minified CSS 
+        Comentarios en la página: https://www.clusterticgalicia.com//home/
+        Global site tag (gtag.js) - Google Analytics 
+        Meta Pixel Code 
+        End Meta Pixel Code 
+        Google tag (gtag.js) 
+        Latest compiled and minified CSS 
+        Comentarios en la página: https://www.clusterticgalicia.com//asociarse/
+        Global site tag (gtag.js) - Google Analytics 
+        Meta Pixel Code 
+        End Meta Pixel Code 
+        Google tag (gtag.js) 
+        Latest compiled and minified CSS 
+        Comentarios en la página: https://www.clusterticgalicia.com//fondos-publicos/
+        Global site tag (gtag.js) - Google Analytics 
+        Meta Pixel Code 
+        End Meta Pixel Code 
+        Google tag (gtag.js) 
+        Latest compiled and minified CSS 
+        ...
+        ```
+
+### Manejo de excepciones de URL y etiquetas no encontradas
+
+- Con el objetivo de mejorar la detección de errores sería interesante añadir un parámetro de excepciones y verificar si al intentar obtener una etiqueta dentro del código HTML, podríamos comprobar preciamente que esta exista en la página.
+
+- Si una determinada etiqueta no existe devolverta el objeto `None`, lo que facilitará este tipo de casos.
+
+- [Código de ejemplo](/Unidad_6_Webscraping_con_Python/15-BeautifulSoup_find_exceptions.py)
+
+    ```python
+     #!/usr/bin/env python3
+
+    from urllib.request import urlopen
+    from urllib.error import HTTPError
+    from urllib.error import URLError
+    from bs4 import BeautifulSoup
+    import urllib.request
+
+    user_agent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
+    headers = {'User-Agent': user_agent}
+
+    url = 'http://python.org'
+
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urlopen(req) as res:
+            html = res.read()
+    except HTTPError as error:
+        print("HTTPError ",error)
+    except URLError as error:
+        print("Server down or incorrect domain ",error)
+    else:
+        res = BeautifulSoup(html,"lxml")
+        if res.title is None:
+            print("Tag not found")
+        else:
+            print(res.title.text)
+    ```	
+
+### Extracción de imágenes y enlaces con el móculo `BeautifulSoup`
+
+- En este ejemplo realizamos l apetición a la url pasada por parámetro con el módulo `requests`
+
+- Posteriormente, construimos el objeto BeautifulSoup a partir del cual vamos a extraer aquellas etiquetas que sean `img&gt;`
+
+- Si la url es correcta, se descarga la imagen de nuego utilizando el módulo `requests`
+
+- Para el caso de **extraer imágenes** a partir de una url podemos hacer uso de métodos `bs.find_all('img')`.
+
+- Esto nos devolverá un listado de etiquetas img encontradas en el código html obtenido.
+
+- [Código de ejemplo](/Unidad_6_Webscraping_con_Python/16-BeautifulSoup_find_images.py)
+
+    - Resultado:
+
+        ```
+        Obtener imágenes de la url con bs4: https://www.python.org
+        Imágenes encontradas 1
+        https://www.python.org/static/img/python-logo.png
+        ```
+
+    
