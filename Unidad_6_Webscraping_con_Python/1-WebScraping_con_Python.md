@@ -7,7 +7,7 @@
 - Si queremos extraer el contenido de una página web automatizando la extracción de información, muchas veces nos encontramos con que la páguina web no ofrece ninguna API para obtener los datos que necesitas y es necesario recurrir a técnicas de scraping para recuperar datos de un web de forma automática.
 - Algunas de la herramientas más pontentes las podemos encontrar en Python, entre las que podemos destacar:
     - `BeautifulSoup`: Permite extraer información de páginas web.
-    - `Scrapy`: Permite automatizar el proceso de scraping de páginas web.
+    - `Scrapy`: Permite automatizar el proceso de scraping de páginas web[(siguiente unidad)](/Unidad_7_Webscraping_avanzado_con_Scrapy/)
 
 ### Resultados
 - Analizar los principales parsers que disponemos en Python para recuoerar informacion de contenidos HTML de un sitio web.
@@ -28,7 +28,8 @@ Si queremos extraer el contenido de una páguina wuen automatizando la extració
 
 1. Extración de contenido web con Python
 2. Extraer contenido y etiquetas con `BeautifulSoup`	
-3. 
+3. Implementar un `crawler` de enlacer a partir de una URL
+4. Resumen
 
 ---
 
@@ -620,3 +621,172 @@ Para ello, realizamos una solicitud HTTP con requests y luego analizamos el cont
         ```
 
     
+### Extraer enlaces a partir de una URL con el módulo `BeautifulSoup`
+
+- Considere una situación en la que desea obtener todos los hipervínculos de la página web.
+
+- En el siguiente ejemplo extraemos todos los enlaces de una determinada URL. La idea es hacer la petición con requests y con BeautifulSoup parsear los datos que devuelve la petición
+
+- [Código de ejemplo](/Unidad_6_Webscraping_con_Python/17-BeautifulSoup_find_links.py)
+
+    - Resultado:
+        ```
+        Ingrese a un sitio web para extraer los links: python.org
+        python.org#content
+        python.org#python-network
+        python.org/
+        https://www.python.org/psf/
+        https://docs.python.org
+        https://pypi.org/
+        python.org/jobs/
+        python.org/community/
+        python.org#top
+        python.org/
+        https://psfmember.org/civicrm/contribute/transact?reset=1&id=2
+        python.org#site-map
+        python.org#
+        python.orgjavascript:;
+        ...
+        ```
+
+    - La instrucción `data=response.text` asigna la páguina web a una variable data.
+    - La instrucción `soup=BeautifulSoup(data,'lxml')` crea un objeto BeautifulSoup a partir de la variable data.
+    - La instrucción `soup.find_all('a')` devuelve una lista de etiquetas que contienen los enlaces de la página web (hipervínculos).
+    - Para su ejecución, bastaría con introducir un sitio web y extraerá todos los enlaces utilizando el método `soup.find_all('a')`.
+    - También podríamos utilizar el módulo `urllib.request` para realizar la petición en lugar del módurlo `requests`.
+
+    - Ejemplo utilizando `urllib.request`:
+
+        - [Código de ejemplo](/Unidad_6_Webscraping_con_Python/18-BeautifulSoup_find_links_urllib.py)
+
+        ```python
+         #!/usr/bin/env python3
+
+        import urllib.request
+        from bs4 import BeautifulSoup
+
+        def get_video_links(archive_url):
+            # crear objeto respuesta
+            response = urllib.request.urlopen(archive_url)
+            # crear objeto beautiful-soup
+            soup = BeautifulSoup(response.read(),'lxml')
+            links = []
+            for link in soup.find_all('a'):
+                file_link = link.get('href')
+                links.append(file_link)
+            return links
+
+        links = get_video_links('https://pyvideo.org')
+        print(links)
+        ```
+
+### Ejercicio: Extracción de enlaces con el módulo `BeautifulSoup`
+
+-  [Código de ejemplo](/Unidad_6_Webscraping_con_Python/19-BeautifulSoup_find_links_ejercicio.py)
+
+    - Resultado:
+        ```
+        Obtener links de la url: https://www.python.org
+        Links encontrados 207
+        https://www.python.org#content
+        https://www.python.org#python-network
+        https://www.python.org/
+        https://www.python.org/psf/
+        https://docs.python.org
+        https://pypi.org/
+        https://www.python.org/jobs/
+        https://www.python.org/community/
+        https://www.python.org#top
+        https://www.python.org/
+        https://psfmember.org/civicrm/contribute/transact?reset=1&id=2
+        https://www.python.org#site-map
+        https://www.python.org#
+        https://www.python.orgjavascript:;
+        https://www.python.orgjavascript:;
+        https://www.python.orgjavascript:;
+        https://www.python.org#
+        https://www.linkedin.com/company/python-software-foundation/
+        https://fosstodon.org/@ThePSF
+        https://www.python.org/community/irc/
+        https://twitter.com/ThePSF
+        https://www.python.org/about/
+        ...
+        ```
+
+## Implementar un `crawler` de enlacer a partir de una URL
+
+- Un crawler es un programa que sigue enlaces de una página web y realiza una serie de acciones en función de los enlaces que encuentra.
+
+
+
+- [Código de ejemplo](/Unidad_6_Webscraping_con_Python/20-crawler.py)
+
+- Ejecución del script:
+    ```bash
+    python3 20-crawler.py https://www.python.org
+    ```
+
+- Resultado:
+
+    ```
+    python3 Unidad_6_Webscraping_con_Python/20-crawler.py https://www.python.org
+    []
+    []
+    ['https://www.python.org/']
+    ['https://www.python.org/', 'https://www.python.org/psf/']
+    ['https://www.python.org/', 'https://www.python.org/psf/']
+    ['https://www.python.org/', 'https://www.python.org/psf/']
+    ['https://www.python.org/', 'https://www.python.org/psf/', 'https://www.python.org/jobs/']
+    ['https://www.python.org/', 'https://www.python.org/psf/', 'https://www.python.org/jobs/', 'https://www.python.org/community/']
+    ['https://www.python.org/', 'https://www.python.org/psf/', 'https://www.python.org/jobs/', 'https://www.python.org/community/']
+    ['https://www.python.org/', 'https://www.python.org/psf/', 'https://www.python.org/jobs/', 'https://www.python.org/community/', 'https://www.python.org/']
+    ['https://www.python.org/', 'https://www.python.org/psf/', 'https://www.python.org/jobs/', 'https://www.python.org/community/', 'https://www.python.org/']
+    ['https://www.python.org/', 'https://www.python.org/psf/', 'https://www.python.org/jobs/', 'https://www.python.org/community/', 'https://www.python.org/']
+    ['https://www.python.org/', 'https://www.python.org/psf/', 'https://www.python.org/jobs/', 'https://www.python.org/community/', 'https://www.python.org/']
+    ['https://www.python.org/', 'https://www.python.org/psf/', 'https://www.python.org/jobs/', 'https://www.python.org/community/', 'https://www.python.org/']
+    ['https://www.python.org/', 'https://www.python.org/psf/', 'https://www.python.org/jobs/', 'https://www.python.org/community/', 'https://www.python.org/']
+    ...
+    ```	
+
+## 4. Resumen
+
+- Las diferentes **técnicas** que disponemos para extraer contenidos de la web.
+- Extraer información de un sitio web mediante los parsers **lxml** y **beautifulSoup**.
+- Extraer información usando los módulos **lxml.etree** y **lxml.html** que se tratan submódulos dentro de la librería lxml.
+- Extraer información mediante el uso de **expresiones XPath**.
+- Extraer contenido y etiquetas con **BeautifulSoup**.
+- Obtener el código HTML de un sitio web y crear un objeto BeautifulSoup mediante **bs4.BeautifulSoup(<contenido_html>, <tipo_analizador>)**
+- Encontrar todos los elementos HTML de un tipo determinado utilizando el método `find_all()` de BeautifulSoup.
+- Extraer etiquetas meta y de contenido mediantes **expresiones regulares**.
+- **Extraer enlaces e imágenes** de una url con BeautifulSoup.
+- Implementar un **crawler** de enlaces a partir de una URL.
+
+
+
+### FAQ
+- `¿Qué es Beautiful Soup?`
+
+    Beautiful Soup es una librería Python que permite extraer información de contenido en formato HTML o XML. Para usarla, es necesario especificar un parser, que es responsable de transformar un documento HTML o XML en un árbol complejo de objetos Python. Esto permite, por ejemplo, que podamos interactuar con los elementos de una página web como si estuviésemos utilizando las herramientas del desarrollador de un navegador.
+
+### Enlaces de interés
+
+- https://es.wikipedia.org/wiki/XPath
+- https://es.wikipedia.org/wiki/Web_scraping
+- https://www.crummy.com/software/BeautifulSoup/bs4/doc/
+- https://www.debian.org/releases/stable/index.en.html
+- https://pypi.org/project/beautifulsoup4/
+
+### Glosario
+
+- `JSON`
+    
+    Acrónimo de JavaScript Object Notation, es un formato ligero para el intercambio de datos. JSON es un subconjunto de la notación literal de objetos de JavaScript que no requiere el uso de XML.
+- `Scrapping`
+    
+    Web Scraping es una técnica utilizada mediante programas de software para extraer información de sitios web. Usualmente, estos programas simulan la navegación de un humano en la World Wide Web ya sea utilizando el protocolo HTTP manualmente, o incrustando un navegador en una aplicación como puede ser Internet Explorer o Mozilla Firefox.
+- `XML`
+    
+    El lenguaje de marcado extensible XML es una herramienta independiente de la plataforma, del software y del hardware para almacenar, transportar e intercambiar información. XML es una versión simplificada de SGML y es un metalenguaje, es decir, un lenguaje para definir otros lenguajes, que los programadores pueden usar para desarrollar un lenguaje que se ajuste a sus requisitos únicos. XML y HTML se complementan en tanto que XML describe los datos y HTML los representa.
+- `XPath`
+    
+    XPath es un lenguaje que le permite seleccionar nodos de un documento XML y calcular valores a partir de su contenido. Hay varias versiones XPath aprobadas por el W3C. En esta URL, puede ver la documentación y todas las versiones de XPath https://www.w3.org/TR/xpath/all
