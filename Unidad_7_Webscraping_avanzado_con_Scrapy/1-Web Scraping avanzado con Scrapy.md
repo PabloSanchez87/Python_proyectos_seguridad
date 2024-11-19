@@ -620,9 +620,422 @@ Estos son los principales elementos de una arquitectura de Scrapy:
 
 ## 4. Proyecto Scrapy para extraer las conferencias europython
 
+Vamos a contruir un proyecto de Scrapy que nos permite extraer los datos de las sessiones de la conferencia EuroPython siguiendo el patrón de la siguiente URL:
+
+`https://ep{year}.europython.eu/en/events/sessiones`
+
+- Podríamos probar con los años de 2016 a 2020.
+
+    https://ep2016.europython.eu/en/events/sessions/
+    https://ep2017.europython.eu/en/events/sessions/
+    https://ep2018.europython.eu/en/events/sessions/
+    https://ep2019.europython.eu/en/events/sessions/
+    https://ep2020.europython.eu/en/events/sessions/
+
+### Creación del proyecto
+
+- La forma estandar de comenzar a trabajar con Scrapy es crear un proyecto, que se realiza con el comando `scrapy startproject <project_name>`.
+
+    ```bash
+    scrapy startproject europython
+    ```
+- De esta forma, se creará la carpeta del proyecto con la siguiente estructura:
+    ```bash
+    .
+    ├── europython: módulo de Python de nuestro proyecto.
+    │   ├── __init__.py
+    │   ├── items.py: archivo donde definimos los campos que queremos extraer.
+    │   ├── middlewares.py: 
+    │   ├── pipelines.py: fichero de pipelenes del proyecto.
+    │   ├── settings.py: fichero
+    │   └── spiders: directorio donde se almacenarán los spiders.
+    │       └── __init__.py
+    └── scrapy.cfg : fichero de configuración principal de Scrapy.
+    ```
+
+
+### Ficheros proyecto Scrapy
+
+- Los items son contenedores que cargaremos con los datos que queremos extraer.
+
+- Como nuestros items contendrán los datos relacionados con el título y la descripción, definiremos estos atributos en el fichero `items.py`.
+
+- En la clase `EuropythonItem`, que se crea de forma automática, definiremos los campos que queremos extraer, instanciando objetos de la clase `scrapy.Field`.
+
+    ```python
+    import scrapy
+    from itemloaders.processors import Compose, MapCompose, Join
+
+    clean_text = Compose(MapCompose(lambda v: v.strip()), Join())   
+
+    def custom_field(text):
+        text = clean_text(text)
+        return text.strip()
+        
+    class EuropythonItem(scrapy.Item):
+        # define the fields for your item here like:
+        # name = scrapy.Field()
+        title = scrapy.Field(output_processor=custom_field)
+        author = scrapy.Field(output_processor=custom_field)
+        description = scrapy.Field(output_processor=custom_field)
+        date = scrapy.Field(output_processor=custom_field)
+        tags = scrapy.Field(output_processor=custom_field)
+    ```
+
+    - La función `custom_field`está utilizando para el formato de las cadenas de texto donde el mñetodo strip() nos permite eliminar cualquier espacio al principio y al ginal para cada uno de los campos y se aplciará automáticamente a todos los elementos que indicamos cuando los instanciamos.
+
+
+### Spider europython
+
+- Los spiders son clases escritas por el usuario para extraer información de un dominio ( o un grupo de dominios).
+
+- Se define como una lista inicial de URLs, para posteriormente definir la lógica necesaria para seguir los enlaces y analziar el contenido de esas páginas para extraer elementos.
+
+- Este spider tendrá un método constructor init para inicializar el spider, la url de la que queremos extraer los datos y un parámetro adicional que indica el año del que queremos extraer información.
+
+- En el archivo `europython_spider.py` definimos la clase `EuropythonSpider` que hereda de la clase `scrapy.Spider`.
+
+- En esta clase se define el spider que a partir de la url de inicio rastreará los enlaces que va encontrando en función del patrón indicado, y para cada entrada obtendrá los datos correspondientes a cada sesión(título, autos, descripción, fecha, etc.).
+
+    ```bash
+    scrapy genspider europython_spider ep2016.europython.eu
+    ```	
+
+    ```python
+    #!/usr/bin/env python3
+
+    import scrapy
+    from scrapy.spiders import CrawlSpider, Rule
+    from scrapy.linkextractors import LinkExtractor
+    from scrapy.linkextractors.lxmlhtml import LxmlLinkExtractor
+    from scrapy.loader import ItemLoader
+
+    from europython.items import EuropythonItem
+
+    class EuropythonSpider(CrawlSpider):
+        def __init__(self, year='', *args, **kwargs):
+            super(EuropythonSpider, self).__init__(*args, **kwargs)
+            self.year = year
+            self.start_urls = ['http://ep'+str(self.year)+".europython.eu/en/events/sessions"]
+            print('start url: '+str(self.start_urls[0]))
+        
+        name = "europython_spider"
+        allowed_domains = ["ep2016.europython.eu", "ep2017.europython.eu","ep2018.europython.eu","ep2019.europython.eu","ep2020.europython.eu"]
+        
+        # Pattern for entries that match the conference/talks and /talks format
+        rules = [Rule(LxmlLinkExtractor(allow=['conference/talks']),callback='process_response2016_17_18'),
+        Rule(LxmlLinkExtractor(allow=['talks']),callback='process_response_europython2019_20')]
+
+        def process_response2016_17_18(self, response):
+            itemLoader = ItemLoader(item=EuropythonItem(), response=response)
+            itemLoader.add_xpath('title', "//div[contains(@class, 'grid-100')]//h1/text()")
+            itemLoader.add_xpath('author', "//div[contains(@class, 'talk-speakers')]//a[1]/text()")
+            itemLoader.add_xpath('description', "//div[contains(@class, 'cms')]//p//text()")
+            itemLoader.add_xpath('date', "//section[contains(@class, 'talk when')]/strong/text()")
+            itemLoader.add_xpath('tags', "//div[contains(@class, 'all-tags')]/span/text()")
+            item = itemLoader.load_item()
+            return item
+            
+        def process_response_europython2019_20(self, response):
+            item = EuropythonItem()
+            item['title'] = response.xpath("//*[@id='talk_page']/div/div/div[1]/h1/text()").extract()
+            item['author'] = response.xpath("//*[@id='talk_page']/div/div/div[1]/h5/a/text()").extract()
+            item['description'] = response.xpath("//*[@id='talk_page']/div/div/div[1]/p[3]/text()").extract()
+            item['date'] = "July "+self.year
+            item['tags'] = response.xpath("//span[contains(@class, 'badge badge-secondary')]/text()").extract()
+
+            return item
+    ```
+
+### Funcionamiento del spider
+
+- Las variables más significativas de nuestro spider son:
+
+    - `name`: nombre del spider.
+    - `allowed_domains`: array con los dominios permitidos.
+    - `start_urls`: array con las URLs de inicio.
+    - `rules`: reglas para la extración de enlaces (estos enlaces también serán visitados por la spider) de esta manera podemos hacer una búsqueda recursiva.
+    - `process_response`: método que se ejecuta cada vez que se realiza una petición a una url. (La regla de extración de enlaces se pasa como parámetro).
+
+
+- Las reglas definidas por objetos del tipo Rule, que reciben como parámetros un objeto extractor de enlaces LinkExtracto donde allow es una expresión regular con la que los enlaces deben coincidir, y una función callback que se pasa como parámetro que se ejecutará cada vez que se extraiga un enlace y se realiza una solicitud a la URL de este enlace.
+
+- Para obtener más información sobre las reglas puedes visitar la documentación oficial: https://doc.scrapy.org/en/latest/topics/spiders.html#scrapy.contrib.spiders.Rule
+
+- En la spider definimos también los métodos `process_response2016_17_18` y `process_response_europython2019_20` para extraer cada uno de los campos.
+
+- Si en la web la vista detallada de cualquiera de las charlas, podemos identificar la expresion XPath necearia para extraer el título, autor, descripción y etiquetas de cada una de las conferencias.
+
+### Obtener Expresion XPath
+
+- Para extraer la información que nos interesa a partir del código HTML utilizaremos expresiones XPath, que podemos obtener haciendo clocl derecho en el navegador y seleccionando la opcion de inspeccionar.
+
+- En este caso, estamos interesados en extraer el título, autor, descripción y etiquetas de cada una de las conferencias.
+
+- Podríamos utilizar `scrapy shell` para obtener las expresions XPath necesarias para extraer dicha información.
+
+    ```bash
+    scrapy shell
+
+    In [1]: fetch('https://ep2019.europython.eu/talks/KNhQYeQ-downloading-a-billion-files-in-python/')
+    2024-11-19 10:13:37 [scrapy. core. engine] INFO: Spider opened
+    2024-11-19 10:13:39 [scrapy.core.engine] DEBUG: Crawled (200) <GET https://ep2019.europython.eu/talks/KNhQYeQ-downloadin
+    g-a-billion-files-in-python/> (referer: None)
+
+    2024-11-19 10:13:39 [asyncio] DEBUG: Using selector: EpollSelector
+    ```	
+
+    ```bash
+    In [2]: response.xpath('//*[@id="talk_page"]/div/div/div[1]/h1').extract()
+    Out[2]: ['<h1>Downloading a Billion Files in Python</h1>']
+
+    2024-11-19 10:18:24 [asyncio] DEBUG: Using selector: EpollSelector
+    ```
+
+
+    ```bash
+    In [3]: response.xpath('//*[@id="talk_page"]/div/div/div[1]/h5/a').extract()
+    Out[3]: ['<a href="../../conference/p/-332.html">James Saryerwinnie</a>']
+
+    2024-11-19 10:19:20 [asyncio] DEBUG: Using selector: EpollSelector
+    ```
+
+    ```bash
+    In [4]: response.xpath('//*[@id="talk_page"]/div/div/div[1]/p[3]').extract()
+    Out[4]: ["<p>You've been given a task.  You need to download some files from a server to your local machine.   The files are fairly small, and you can list and access these files from the remote server through a REST API.  You'd like to download them as fast as possible.  The catch?  There's a billion of them.  Yes, one billion files.</p>"]
+
+    2024-11-19 10:20:18 [asyncio] DEBUG: Using selector: EpollSelector
+    ```
+
+    ```bash
+    In [5]: response.xpath("//span[contains(@class,'badge badge-secondary')]/text()").extract()
+    Out[5]:
+    ['ASYNC / Concurreny',
+    'Case Study',
+    'Multi-Processing',
+    'Multi-Threading',
+    'Performance']
+    ```	
+
+### Ejecutando el spider Europython
+
+- Podemos ejecutar nuestro spider con el siguiente comando:
+
+    ```bash 
+    scrapy crawl europython_spider -o europython.json -t json
+    ``` 
+
+- Donde los últimos parámetros indican que los datos extraídos se almacenan en un fichero llamado `europython_items.json` y que se exportará en formato json.
+
+- Otra opción interesantes es que los spiders pueden administrar los argumentos que se pasan en el comando de rastreo utilizando la opción `-a` de Scrapy. Por ejemplo, podemos ejecutar el spider con el siguiente comando:
+
+
+    ```bash 
+    scrapy crawl europython_spider -a year=2026 -o europython.json -t json
+    ```
+
+
+### Pipelines proyecto europython
+
+- De esta forma los archivos europython_items.json, europython_items.xml y europython_items.csv se generan automáticamente.
+
+- ¿Qué sucede si queremos separar la información o validar algunos campos antes de guardar los registros?
+
+    - Para esos casos podemos hacer uso de los pipelines. 
+    - Permiten tratar la información extraída, como por ejemplo, almacenar la información en otro recurso como por ejemplo un archivo csv o un archivo sqlite.
+
+- Para ellos, primero necesitamos **habilitar el uso de pipelines en el fichero `settings.py`** de nuestro proyecto.
+
+- Este paso consiste en añadir una linea que indique la clase donde se definián las reglas para el pipeline definido, en este caso, estamos definiendo 4 pipelines:
+
+    ```python
+    ITEM_PIPELINES = {
+        'europython.pipelines.EuropythonJsonExport': 100,
+        'europython.pipelines.EuropythonXmlExport': 200,
+        'europython.pipelines.EuropythonCSVExport': 300,
+        #'europython.pipelines.EuropythonSQLitePipeline': 400
+    }
+    ``` 
+
+#### Fichero `pipelines.py`
+- La clase `EuropythonJsonExport` se encarga de guardar los datos extraídos en un fichero json.
+
+```python
+class EuropythonJsonExport(object):    
+    def __init__(self):
+        self.file = codecs.open('europython_items.json', 'w+b', encoding='utf-8')
+
+    def process_item(self, item, spider):
+        line = json.dumps(dict(item), ensure_ascii=False) + "\n"
+        self.file.write(line)
+        return item
+
+    def spider_closed(self, spider):
+        self.file.close()
+```
+
+- La clase `EuropythonXmlExport` se encarga de guardar los datos extraídos en un fichero xml.
+
+```python
+class EuropythonXmlExport(object):
+    
+    def __init__(self):
+        self.files = {}
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        pipeline = cls()
+        crawler.signals.connect(pipeline.spider_opened, signals.spider_opened)
+        crawler.signals.connect(pipeline.spider_closed, signals.spider_closed)
+        return pipeline
+
+    def spider_opened(self, spider):
+        file = open('europython_items.xml', 'w+b')
+        self.files[spider] = file
+        self.exporter = XmlItemExporter(file)
+        self.exporter.start_exporting()
+
+    def spider_closed(self, spider):
+        self.exporter.finish_exporting()
+        file = self.files.pop(spider)
+        file.close()
+
+    def process_item(self, item, spider):
+        self.exporter.export_item(item)
+        return item
+```
+
+- De la misma forma, la clase `EuropythonCSVExport` se encarga de guardar los datos extraídos en un fichero csv.
+
+- Al finalizar el proceso, obtenemos como ficheros de salida:
+
+    - europython_items.json
+    - europython_items.xml
+    - europython_items.csv
+
+#### Ejercicio: Implementar pipelines para guardar los datos en una base de datos sqlite
+
+- [Código pipeline-sqlite](/Unidad_7_Webscraping_avanzado_con_Scrapy/pipelines-sqlite.py)
+
+
+### Settings proyecto Europython
+
+- `settings.py`: Definimos el nombre del módulo `europython.spiders` y los pipelines definidos entre los que destacamos uno que permite exportar los datos en formato xml(EuropythonXmlExport), json(EuropythonJsonExport) y csv(EuropythonCSVExport).
+
+- También tenemos un pipeline que permite guardar los datos en una base de datos sqlite.
+
+```python
+ # Scrapy settings for europython project
+#
+# For simplicity, this file contains only the most important settings by
+# default. All the other settings are documented here:
+#
+#
+http://doc.scrapy.org/en/latest/topics/settings.html
+#
+BOT_NAME = 'europython'
+
+SPIDER_MODULES = ['europython.spiders']
+NEWSPIDER_MODULE = 'europython.spiders'
+
+# Configure item pipelines
+# See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
+ITEM_PIPELINES = {
+ 'europython.pipelines.EuropythonJsonExport': 100,
+ 'europython.pipelines.EuropythonXmlExport': 200,
+ 'europython.pipelines.EuropythonCSVExport': 300,
+ 'europython.pipelines.EuropythonSQLitePipeline': 400
+}
+
+DOWNLOADER_MIDDLEWARES = {
+"scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware": 110,
+#"europython.middlewares.ProxyMiddleware": 100,
+}
+```	
+
+- De esta forma ya tenemos un proyecto funcional, si lo ejecutamos, extraerá la información deseada y la guardará en los archivos correspondientes.
+
+- Sin embrago, todavía hay aspectos por mejorar.
+
+- Una de las más importantes es evitar el bloqueo de nuestro spider debido a un número elevado de peticiones.
+
+- El primer paso para evitar este caso es limitar la velocidad de nuestro spider. En scrapy esto se puede hacer modificando la variable `DOWNLOAD_DELAY` en el fichero `settings.py`.
+
+    ```python	
+    DOWNLOAD_DELAY = 3
+    ```
+
 ## 5. Resumen
 
 
+#### Conceptos principales
+- **Arquitectura**: Comprender los diferentes elementos que forman Scrapy. Entre los principales elementos de la arquitectura se destacan:
+  - **Spiders**
+  - **Items**
+  - **Pipelines**
+
+#### Extracción de información
+- Uso de la **Shell de Scrapy** para acceder a elementos HTML y extraer información con **expresiones XPath**.
+  - Ejemplo:
+    ```python
+    fetch('url_dominio')
+    response.xpath('//title/text()').extract()
+    ```
+
+#### Herramientas útiles
+- Utilización del método **`Selector.xpath()`** para extraer información específica.
+
+#### Creación de proyectos en Scrapy
+- Comando inicial:
+  ```bash
+  scrapy startproject <nombre_proyecto>
+  ```
+
+#### Organización del proyecto
+- Identificar la estructura de ficheros y carpetas del proyecto Scrapy:
+  - `items.py`
+  - `spiders/`
+  - `pipelines.py`
+
+## Definición de spiders
+- Crear un nuevo **spider** basado en la clase `CrawlSpider`.
+- Asignar un nombre al spider y el dominio que se desea rastrear.
+
+#### Definir comportamiento de extracción
+- Implementar el método **`parse()`** para:
+  - Analizar la respuesta.
+  - Extraer datos.
+  - Obtener nuevas URLs para crear nuevas solicitudes.
+
+#### Configuración avanzada
+- Definir un **pipeline** para procesar los **items** extraídos.
+- Modificar y analizar el archivo de configuración principal: **`settings.py`**.
+
+#### Exportar resultados
+- Guardar los datos extraídos en formatos como **JSON**, **CSV** o **XML**.
 
 
+### FAQ
 
+- `¿Cuáles son los principales componentes de la arquitectura de scrapy?`
+
+    La arquitectura de Scrapy contiene cinco componentes principales:
+
+    - El motor de Scrapy
+    - Planificador
+    - Descargador
+    - Arañas
+    - Tuberías de elementos
+
+### Enlaces de interés
+
+- https://docs.scrapy.org/en/latest/
+- https://doc.scrapy.org/en/latest/topics/commands.html
+- https://scrapy.org/
+- https://github.com/DanMcInerney/xsscrapy
+
+### Glosario
+
+- `Crawler (Rastreador)`
+    
+    Programa de software que visita virtualmente todas las páginas de Internet con el objetivo de crear índices para los motores de búsqueda. Por lo general, los rastreadores se centran más en los archivos de texto que en los gráficos.
