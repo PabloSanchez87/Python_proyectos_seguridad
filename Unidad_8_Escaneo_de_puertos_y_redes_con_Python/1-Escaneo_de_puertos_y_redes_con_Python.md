@@ -312,5 +312,311 @@
 
 - Tambien podríamos realizar estos escaneos con nmap desde python y también tendríamos la opción de realizarlos los módulos `os` y `subprocess`.
 
-## Usando `nmap` con el módulo `os`
+### Usando `nmap` con el módulo `os`
 
+- Para usar nmap con el módulo `os` podemos utilizar el comando `os.system()` que permite ejecutar comandos en la terminal.
+
+    ```python
+    import os
+
+    nmap_command="nmap -sT 127.0.0.1"
+
+    os.system(nmap_command)
+    ```
+
+    - Resultado (ejemplo):
+        ```bash
+        Nmap scan report for 127.0.0.1
+        Host is up (0.00012s latency).
+        Not shown: 998 closed ports
+        PORT     STATE SERVICE
+        22/tcp   open  ssh
+        80/tcp   open  http
+        ```
+
+### Usando `nmap` con el módulo `subprocess`
+
+- Con el módulo `subprocess` podemos proceder de la misma forma que hacíamos con el módulo `os`, pero en este caso podemos trabajar con las alidas STDOUT y STDERR de la consola, cosa que nos facilita el posterior tratamiento del resultado.
+
+    ```python
+    from subprocess import Popen, PIPE
+
+    process = Popen(['nmap','-O','127.0.0.1'], stdout=PIPE, stderr=PIPE)
+    stdout, stderr = process.communicate()
+    print(stdout.decode())
+    ```
+
+    - Necesitamos permisos de administrador.
+
+    - Resultado:
+        ```bash
+        Nmap scan report for localhost (127.0.0.1)
+        Host is up (0.000042s latency).
+        Not shown: 998 closed ports
+        PORT STATE SERVICE
+        22/tcp open ssh
+        631/tcp open ipp
+        Device type: general purpose
+        Running: Linux 2.6.X
+        OS CPE: cpe:/o:linux:linux_kernel:2.6.32
+        OS details: Linux 2.6.32
+        Network Distance: 0 hops
+        ```
+
+### Ejercicio: Escaneo con `python-nmap` dada una lista de puertos y una dirección IP.
+
+- Realizar un escaneo con nmap con las siguientes condiciones en forma de argumentos:
+    - Puertos a escanear: 21,22,23,80,8080
+    - -n para no hacer resolución DNS
+    - Una vez obteniedos, guardarlos en un fichero scan.txt
+    - IP: 45.33.32.156 que corresponde a scanme.nmap.org
+
+- [Código del ejercicio](/Unidad_8_Escaneo_de_puertos_y_redes_con_Python/6-Ejercicio_nmap.py
+)
+
+    - Resultado:
+        ```
+        45.33.32.156
+        Port:21 State:closed
+        Port:22 State:open
+        Port:23 State:closed
+        Port:25 State:closed
+        Port:80 State:filtered
+        Port:8080 State:closed
+        ```
+
+
+## `Escaneo asíncrono`
+
+- Podemos realizar escaneos asíncronos haciendo uso de la clase `PortScannerAsync()`.
+
+- En este caso, al realizar el escaneo le podemos indicar un parámetro adicional de función callback donde definimos la función de retorno, que se ejecutaría al final del proceso.
+
+- [Código de ejemplo](/Unidad_8_Escaneo_de_puertos_y_redes_con_Python/7-PortScannerAsync.py)
+
+    - Resultado:
+        ```bash
+        Scanning >>>
+        5.33.32.156 {'nmap': {'command_line': 'nmap -oX - -sP 45.33.32.156', 'scaninfo': {}, 'scanstats': {'timestr': 'Thu Nov 21 10:09:35 2024', 'elapsed': '0.53', 'uphosts': '1', 'downhosts': '0', 'totalhosts': '1'}}, 'scan': {'45.33.32.156': {'hostnames': [{'name': 'scanme.nmap.org', 'type': 'PTR'}], 'addresses': {'ipv4': '45.33.32.156'}, 'vendor': {}, 'status': {'state': 'up', 'reason': 'conn-refused'}}}}
+        ```
+
+    - De esta forma, podemos definir una función de callback que se ejecute cada vez que nmap disponga de un resultado para la máquina que estemos analizando. 
+
+### Escaneo asíncrono con `python-nmap`
+
+- En el siguiente ejemplo lo que hacemos es implementar una clase que realiza el escaneo asíncrono a partir de la información introducida por el usuario en forma de argumento en el script.
+
+- [Código de ejemplo](/Unidad_8_Escaneo_de_puertos_y_redes_con_Python/8-NmapScannerAsync.py.py)
+
+    - Resultado: `python3 8-NmapScannerAsync.py --host scanme.nmap.org` 
+        ```bash
+        Checking port 80 ..........
+        Scanning >>>
+        Scanning >>>
+        Scanning >>>
+        Command line:nmap -oX - -A -sV -p80 45.33.32.156
+        Port 80 --> {'state': 'open', 'reason': 'syn-ack', 'name': 'http', 'product': 'Apache httpd', 'version': '2.4.7', 'extrainfo': '(Ubuntu)', 'conf': '10', 'cpe': 'cpe:/a:apache:http_server:2.4.7', 'script': {'http-server-header': 'Apache/2.4.7 (Ubuntu)', 'http-title': 'Go ahead and ScanMe!'}}
+        Checking port 8080 ..........
+        Scanning >>>
+        Command line:nmap -oX - -A -sV -p8080 45.33.32.156
+        Port 8080 --> {'state': 'closed', 'reason': 'conn-refused', 'name': 'http-proxy', 'product': '', 'version': '', 'extrainfo': '', 'conf': '3', 'cpe': ''}
+        ```	
+
+    - Si lo ejecutamos con los parámetros --host y --ports podemos ver como realiza el escaneo en los puertos especificados.
+        - La función callbackResult() será la encargada de mostrar el estado del escaneo para cada puerto.
+
+    - Resultado: `python3 8-NmapScannerAsync.py --host scanme.nmap.org --ports 80,443,22,8080`
+
+        ```bash
+        Checking port 80 ..........
+        Scanning >>>
+        Scanning >>>
+        Scanning >>>
+        Command line:nmap -oX - -A -sV -p80 45.33.32.156
+        Port 80 --> {'state': 'open', 'reason': 'syn-ack', 'name': 'http', 'product': 'Apache httpd', 'version': '2.4.7', 'extrainfo': '(Ubuntu)', 'conf': '10', 'cpe': 'cpe:/a:apache:http_server:2.4.7', 'script': {'http-server-header': 'Apache/2.4.7 (Ubuntu)', 'http-title': 'Go ahead and ScanMe!'}}
+        Checking port 443 ..........
+        Scanning >>>
+        Command line:nmap -oX - -A -sV -p443 45.33.32.156
+        Port 443 --> {'state': 'closed', 'reason': 'conn-refused', 'name': 'https', 'product': '', 'version': '', 'extrainfo': '', 'conf': '3', 'cpe': ''}
+        Checking port 22 ..........
+        Scanning >>>
+        Scanning >>>
+        Command line:nmap -oX - -A -sV -p22 45.33.32.156
+        Port 22 --> {'state': 'open', 'reason': 'syn-ack', 'name': 'ssh', 'product': 'OpenSSH', 'version': '6.6.1p1 Ubuntu 2ubuntu2.13', 'extrainfo': 'Ubuntu Linux; protocol 2.0', 'conf': '10', 'cpe': 'cpe:/o:linux:linux_kernel', 'script': {'ssh-hostkey': '\n  1024 ac:00:a0:1a:82:ff:cc:55:99:dc:67:2b:34:97:6b:75 (DSA)\n  2048 20:3d:2d:44:62:2a:b0:5a:9d:b5:b3:05:14:c2:a6:b2 (RSA)\n  256 96:02:bb:5e:57:54:1c:4e:45:2f:56:4c:4a:24:b2:57 (ECDSA)\n  256 33:fa:91:0f:e0:e1:7b:1f:6d:05:a2:b0:f1:54:41:56 (ED25519)'}}
+        Checking port 8080 ..........
+        Scanning >>>
+        Command line:nmap -oX - -A -sV -p8080 45.33.32.156
+        Port 8080 --> {'state': 'closed', 'reason': 'conn-refused', 'name': 'http-proxy', 'product': '', 'version': '', 'extrainfo': '', 'conf': '3', 'cpe': ''}
+        ```
+
+## Ejecutar script de nmap para detectar servicios y vulnerabilidades
+
+- `Nmap` es una herramienta muy conocida en el mundo de la seguridad informática por su funcionalidad de escaneo de redes, puertos y servicios.
+
+- Una de las características más interesantes que tiene nmap es la posibilidad de ejecutar scripts que siguen la especificación `NSE(Nmap Scripting Engine)`
+
+- `NSE` es una herramienta que permite extender los tipos de escaneos que se pueden realizar e incluso realizar tareas de detección de vulnerabilidades en los servicios.
+
+- De esta forma, a parte de detectar si un determinado puerto está abierto o cerrado, también podemos ejecutar turinas más compleajas que permiten filtrar información sobre un determinado objetivo.
+
+- Actualmente incorpora el uso de scripts para comprobar algunas de las vulnerabilidades más conocidas. Estos scripts están ordenados por categorías de la siguiente manera:
+
+    - `Auth:` scripts disponibles de autenticación.
+    - `Default:` ejecuta los scripts básicos por defecto.
+    - `Discovery:` scripts disponibles para recuperar información sobre el objetivo.
+    - `External:` script que contactan con fuentes externas.
+    - `Intrusive:` scripts que son considerados intrusivos por el objetivo.
+    - `Malware:` scripts que comprueban la presencia de conexiones abiertas por códigos maliciosos o backdoors (puertas traseras).
+    - `Safe:` ejecuta scripts que no son considerados intrusivos.
+    - `Vuln:` scripts que comprueban vulnerabilidades más conocidas y comunmente explotadas.
+    - `All:` ejecuta absolitamente todos los scritps con extension NSE disponibles.
+
+- Por lo general, el motor de scipts de NMAP puede ejecutar diferentes funcionalidades entre las que podemos destacar:
+
+    - `Descubrumiento de redes`: Es la función básica de Nmap. Los ejemplos incluyen encontrar la información whois del nombre de dominio destino, encontrar puertos abiertos, consultas SNMP y enumerar los recursos y servicios NFS / SMB / RPC disponibles.
+
+    - `Detección de vulnerabilidades`: Cuando se descubre una nueva vulnerabilidad, sería impotante escanear la red para identificar los sistemas vulnerables antes que los atacantes los encuentren. En este aspecto, NSE nos podría ayudar a realizar comprobaciones de vulnerabilidades que podemos encontrar en los diferentes servicios que exponen los servidores.
+
+- Para detectar posibles vulnerabilidades en los servicios de los puertos que están abiertos podemos hacer usp de los scripts de namp que están disponibles cuando se instala el módulo.
+
+    - En el caso de distribuciones basadas en Debian:
+        - /usr/share/nmap/scripts
+
+- Los scrips permiten la programación de rutinas para encontrar posibles vulnerabilidades de determinado host.
+
+- [Scripts de nmap](https://nmap.org/nsedoc/scripts/)
+
+### Ejecución scripts de nmap
+
+- Hay una gran cantidad de scripts para cada tipo de servicio del cual queremos concocer más.
+
+- Hay incluso algunos que permiten realizar ataques de diccionario o fuerza bruta y explotar determinadas vulnerabilidades en algunos de los servicios y puertos que exponen las máquinas.
+
+- Para ejecutar estos scripts es necesario pasar la opción `--script` dentro del comando nmap.
+
+- La sintaxis para ejecutar scripts es la siguiente:
+
+    ```bash
+    nmap --script <script> <host>
+    nmap --script <categoria>/<script> <host>
+    ```
+
+    - Ejemplo:
+        ```bash
+        nmap --script default scanme.nmap.org
+
+        Starting Nmap 7.80 ( https://nmap.org ) at 2024-11-21 10:56 CET
+        Nmap scan report for scanme.nmap.org (45.33.32.156)
+        Host is up (0.19s latency).
+        Other addresses for scanme.nmap.org (not scanned): 2600:3c01::f03c:91ff:fe18:bb2f
+        Not shown: 996 closed ports
+        PORT      STATE SERVICE
+        22/tcp    open  ssh
+        | ssh-hostkey: 
+        |   1024 ac:00:a0:1a:82:ff:cc:55:99:dc:67:2b:34:97:6b:75 (DSA)
+        |   2048 20:3d:2d:44:62:2a:b0:5a:9d:b5:b3:05:14:c2:a6:b2 (RSA)
+        |   256 96:02:bb:5e:57:54:1c:4e:45:2f:56:4c:4a:24:b2:57 (ECDSA)
+        |_  256 33:fa:91:0f:e0:e1:7b:1f:6d:05:a2:b0:f1:54:41:56 (ED25519)
+        80/tcp    open  http
+        |_http-title: Go ahead and ScanMe!
+        9929/tcp  open  nping-echo
+        31337/tcp open  Elite
+
+        Nmap done: 1 IP address (1 host up) scanned in 23.94 seconds
+        ```
+
+#### Ejemplo:
+
+- Si quisieras ejecutar todos los scripts de la categoria `discovery` podríamos ejecutar el siguiente comando:
+
+    ```bash
+    nmap --script discovery scanme.nmap.org
+    ```
+
+#### Ejemplo: Lanzar script obtener cabeceras HTTP
+
+- Con la opción `--script-help` podríamos ver una descripción de un script específico.
+
+- Ejemplo:
+
+    ```bash
+    nmap --script-help http-headers
+    ```
+
+    - Resultado:
+        ```bash
+        Starting Nmap 7.80 ( https://nmap.org ) at 2024-11-21 10:59 CET
+
+        http-headers
+        Categories: discovery safe
+        https://nmap.org/nsedoc/scripts/http-headers.html
+        Performs a HEAD request for the root folder ("/") of a web server and displays the HTTP headers returned.
+        ```
+
+- Si queremos ejecutar el script `http-headers` podemos hacerlo de la siguiente manera, obteniendo las **cabeceras HTTP configuradas en el servidor web**.
+
+    ```bash
+    nmap --script http-headers scanme.nmap.org
+    ```
+
+    - Resultado:
+        ```bash
+        Starting Nmap 7.80 ( https://nmap.org ) at 2024-11-21 11:00 CET
+        Nmap scan report for scanme.nmap.org (45.33.32.156)
+        Host is up (0.19s latency).
+        Other addresses for scanme.nmap.org (not scanned): 2600:3c01::f03c:91ff:fe18:bb2f
+        Not shown: 996 closed ports
+        PORT      STATE SERVICE
+        22/tcp    open  ssh
+        80/tcp    open  http
+        | http-headers: 
+        |   Date: Thu, 21 Nov 2024 10:00:50 GMT
+        |   Server: Apache/2.4.7 (Ubuntu)
+        |   Accept-Ranges: bytes
+        |   Vary: Accept-Encoding
+        |   Connection: close
+        |   Content-Type: text/html
+        |   
+        |_  (Request type: HEAD)
+        9929/tcp  open  nping-echo
+        31337/tcp open  Elite
+
+        Nmap done: 1 IP address (1 host up) scanned in 12.78 seconds
+        ```
+
+### Obtener subdominios con script de nmap
+
+- Los subdominios normalmente se utilizan para alojar sitios web adicionales para un subconjunto específico de usuarios.
+
+- El script `dns-brute` que podemos encontrar dentro los scripts de Nmap permite obtener subdominios y las direcciones IP asociadas a ellos.
+
+    - [Script dns-brute](https://nmap.org/nsedoc/scripts/dns-brute.html)
+
+    - Ejemplo:
+        ```bash
+        nmap -p 80,443 --script dns-brute scanme.nmap.org
+
+        Starting Nmap 7.80 ( https://nmap.org ) at 2024-11-21 11:03 CET
+        Nmap scan report for scanme.nmap.org (45.33.32.156)
+        Host is up (0.18s latency).
+        Other addresses for scanme.nmap.org (not scanned): 2600:3c01::f03c:91ff:fe18:bb2f
+
+        PORT    STATE  SERVICE
+        80/tcp  open   http
+        443/tcp closed https
+
+        Host script results:
+        | dns-brute: 
+        |   DNS Brute-force hostnames: 
+        |     chat.nmap.org - 45.33.32.156
+        |     chat.nmap.org - 2600:3c01::f03c:91ff:fe18:bb2f
+        |     *AAAA: 2600:3c01:e000:3e6::6d4e:7061
+        |_    *A: 50.116.1.184
+
+        Nmap done: 1 IP address (1 host up) scanned in 6.74 seconds
+        ```
+    
+    - En ese punto, un pentester o analista de seguridad podría utilizar esta información para analizar de forma recursiva los diferentes subdominios encontrados.
+  
+### Lanzar scripts para un determinado servicio
+        

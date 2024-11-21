@@ -1,0 +1,7 @@
+45.33.32.156
+Port:21 State:closed
+Port:22 State:open
+Port:23 State:closed
+Port:25 State:closed
+Port:80 State:filtered
+Port:8080 State:closed
