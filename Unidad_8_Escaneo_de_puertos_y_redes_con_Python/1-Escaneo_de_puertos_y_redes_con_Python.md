@@ -620,3 +620,383 @@
   
 ### Lanzar scripts para un determinado servicio
         
+- Podríamos ejecutar los scripts correspondientes al servicio ssh para el caso de que el puerto 22 esté abierto.
+
+- De esta forma estamos ejecutando todos los scripts con nombre que comiencen por ssh:
+
+    ```bash
+    nmap --script ssh-* <ip_domain>
+    ```
+
+- Los scripts que podríamos utilizar para testear el servicio ssh serían los siguientes localizados dentro del directorio de scripts de nmap:
+
+    ```
+    /usr/share/nmap/scripts/ssh-brute.nse
+    /usr/share/nmap/scripts/ssh-auth-methods.nse
+    /usr/share/nmap/scripts/ssh-scan.nse
+    /usr/share/nmap/scripts/ssh2-enum-algos.nse
+    /usr/share/nmap/scripts/ssh-hostkey.nse
+    /usr/share/nmap/scripts/ssh-publickey-acceptance.nse
+    /usr/share/nmap/scripts/ssh2-missing-host-key.nse
+    /usr/share/nmap/scripts/sshv1.nse
+    ```
+
+- Ejemplo de ejecución del script `ssh-hostkey` en el puerto 22 que obtiene información de la clave pública del servidor:
+
+    ```bash
+    nmap -sV --script ssh-hostkey scanme.nmap.org
+
+    - Resultado:
+        ```bash
+        Starting Nmap 7.80 ( https://nmap.org ) at 2024-11-22 09:26 CET
+        Nmap scan report for scanme.nmap.org (45.33.32.156)
+        Host is up (0.19s latency).
+        Other addresses for scanme.nmap.org (not scanned): 2600:3c01::f03c:91ff:fe18:bb2f
+        Not shown: 996 closed ports
+        PORT      STATE SERVICE    VERSION
+        22/tcp    open  ssh        OpenSSH 6.6.1p1 Ubuntu 2ubuntu2.13 (Ubuntu Linux; protocol 2.0)
+        | ssh-hostkey: 
+        |   1024 ac:00:a0:1a:82:ff:cc:55:99:dc:67:2b:34:97:6b:75 (DSA)
+        |   2048 20:3d:2d:44:62:2a:b0:5a:9d:b5:b3:05:14:c2:a6:b2 (RSA)
+        |   256 96:02:bb:5e:57:54:1c:4e:45:2f:56:4c:4a:24:b2:57 (ECDSA)
+        |_  256 33:fa:91:0f:e0:e1:7b:1f:6d:05:a2:b0:f1:54:41:56 (ED25519)
+        80/tcp    open  http       Apache httpd 2.4.7 ((Ubuntu))
+        |_http-server-header: Apache/2.4.7 (Ubuntu)
+        9929/tcp  open  nping-echo Nping echo
+        31337/tcp open  tcpwrapped
+        Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+        Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        Nmap done: 1 IP address (1 host up) scanned in 25.80 seconds
+
+        ```
+
+    - Al pasarle el parámetro `-sV` le estamos indicando que también muestre información relacionada con la versión del SO.
+
+- También podríamos obtener más información acerca de los **algoritmos de cifrado soportados por el servidor usando el script ssh2-enum-algos** sobre el puerto:
+
+    ```bash
+    nmap -sV -p22 --script ssh2-enum-algos scanme.nmap.org
+    ```
+    
+    - Resultado:
+        ```bash
+        Starting Nmap 7.80 ( https://nmap.org ) at 2024-11-22 09:31 CET
+        Nmap scan report for scanme.nmap.org (45.33.32.156)
+        Host is up (0.19s latency).
+        Other addresses for scanme.nmap.org (not scanned): 2600:3c01::f03c:91ff:fe18:bb2f
+
+        PORT   STATE SERVICE VERSION
+        22/tcp open  ssh     OpenSSH 6.6.1p1 Ubuntu 2ubuntu2.13 (Ubuntu Linux; protocol 2.0)
+        | ssh2-enum-algos: 
+        |   kex_algorithms: (8)
+        |       curve25519-sha256@libssh.org
+        |       ecdh-sha2-nistp256
+        |       ecdh-sha2-nistp384
+        |       ecdh-sha2-nistp521
+        |       diffie-hellman-group-exchange-sha256
+        |       diffie-hellman-group-exchange-sha1
+        |       diffie-hellman-group14-sha1
+        |       diffie-hellman-group1-sha1
+        |   server_host_key_algorithms: (4)
+        |       ssh-rsa
+        |       ssh-dss
+        |       ecdsa-sha2-nistp256
+        |       ssh-ed25519
+        |   encryption_algorithms: (16)
+        |       aes128-ctr
+        |       aes192-ctr
+        |       aes256-ctr
+        |       arcfour256
+        |       arcfour128
+        |       aes128-gcm@openssh.com
+        |       aes256-gcm@openssh.com
+        |       chacha20-poly1305@openssh.com
+        |       aes128-cbc
+        |       3des-cbc
+        |       blowfish-cbc
+        |       cast128-cbc
+        |       aes192-cbc
+        |       aes256-cbc
+        |       arcfour
+        |       rijndael-cbc@lysator.liu.se
+        |   mac_algorithms: (19)
+        |       hmac-md5-etm@openssh.com
+        |       hmac-sha1-etm@openssh.com
+        |       umac-64-etm@openssh.com
+        |       umac-128-etm@openssh.com
+        |       hmac-sha2-256-etm@openssh.com
+        |       hmac-sha2-512-etm@openssh.com
+        |       hmac-ripemd160-etm@openssh.com
+        |       hmac-sha1-96-etm@openssh.com
+        |       hmac-md5-96-etm@openssh.com
+        |       hmac-md5
+        |       hmac-sha1
+        |       umac-64@openssh.com
+        |       umac-128@openssh.com
+        |       hmac-sha2-256
+        |       hmac-sha2-512
+        |       hmac-ripemd160
+        |       hmac-ripemd160@openssh.com
+        |       hmac-sha1-96
+        |       hmac-md5-96
+        |   compression_algorithms: (2)
+        |       none
+        |_      zlib@openssh.com
+        Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+        Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        Nmap done: 1 IP address (1 host up) scanned in 1.63 seconds
+        ```	
+
+### Analizar el servicio FTP con Scripts de Nmap
+
+- Nmap proporciona una serie de scripts que podríamos utilizar para analizar posibles vulnerabilidades que tenga abierto el puerto 21.
+
+- Por ejemplo, el script `ftp-anon`, si lo ejecutamos sobre la máquina objetivo en el puerto 21 podemos saber si el servicio FTP permite la autenticación sin tener que introducir un nombre de usuario y contraseña.
+
+- Podríamos ejecutar dicho script para comprobar si el servidor FTP que estamos analizando soporta autenticación sin usuario y contraseña.
+
+    ```bash
+    nmap -sV -p21 --script ftp-anon ftp.be.debian.org
+    ```
+
+    - Resultado:
+        ```bash
+        Nmap scan report for ftp.be.debian.org (195.234.45.114)
+        Host is up (0.046s latency).
+        Other addresses for ftp.be.debian.org (not scanned): 2a05:7300:0:100:195:234:45:114
+        rDNS record for 195.234.45.114: mirror.as35701.net
+
+        PORT   STATE SERVICE VERSION
+        21/tcp open  ftp     ProFTPD
+        | ftp-anon: Anonymous FTP login allowed (FTP code 230)
+        | drwxr-xr-x   9 ftp      ftp          4096 Nov 22 08:36 debian
+        | drwxr-xr-x   5 ftp      ftp           105 Nov 10 06:39 debian-cd
+        | drwxr-xr-x   7 ftp      ftp          4096 Nov 21 23:27 debian-security
+        | drwxr-xr-x   5 ftp      ftp          4096 Oct 13  2006 ftp.irc.org
+        | -rw-r--r--   1 ftp      ftp           432 Jul  9  2021 HEADER.html
+        | drwxr-xr-x   5 ftp      ftp          4096 Nov 22 08:23 mint
+        | drwxr-xr-x   5 ftp      ftp            49 Nov 30  2015 mint-iso
+        | lrwxrwxrwx   1 ftp      ftp            33 Apr 29  2021 pub -> /var/www/html/www.kernel.org/pub/
+        | drwxr-xr-x   7 ftp      ftp          4096 Nov 22 06:58 ubuntu
+        | drwxr-xr-x  36 ftp      ftp          4096 Nov 22 05:47 ubuntu-cdimage
+        | drwxr-xr-x  30 ftp      ftp          4096 Nov 22 01:18 ubuntu-cloudimages
+        | drwxr-xr-x   7 ftp      ftp          4096 Nov 22 07:17 ubuntu-ports
+        | drwxr-xr-x  15 ftp      ftp          4096 Nov 22 02:24 ubuntu-releases
+        | drwxr-xr-x  24 ftp      ftp           291 Nov 22 08:01 video.fosdem.org
+        | -rw-r--r--   1 ftp      ftp           390 Jul  9  2021 welcome.msg
+        |_drwxr-xr-x   4 ftp      ftp          4096 Jun 14  2023 www.kernel.org
+
+        Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        Nmap done: 1 IP address (1 host up) scanned in 12.48 seconds
+        ```
+
+#### Ejercicio: Escaneo con python-nmap con el objetivo de lanzar diferentes scripts de nmap y detectar servicios vulnerables.
+
+- [Código del ejercicio](/Unidad_8_Escaneo_de_puertos_y_redes_con_Python/9-EscaneoDePuertosPython.py)
+
+- Ejecución del script:
+
+    ```bash
+    python3 9-EscaneoDePuertosPython.py --host 195.234.45.114 --ports 21
+    ```
+
+    - Resultado:
+        ```bash
+        Checking port 21 ..........
+        [+] 195.234.45.114 tcp/21 open
+        Checking FTP port with Nmap scripts...
+        Checking ftp-anon.nse .....
+        Scanning >>>
+        Scanning >>>
+        Command line: nmap -oX - -A -sV -p21 --script ftp-anon.nse 195.234.45.114
+        Script ftp-anon --> Anonymous FTP login allowed (FTP code 230)
+        drwxr-xr-x   9 ftp      ftp          4096 Nov 22 08:36 debian
+        drwxr-xr-x   5 ftp      ftp           105 Nov 10 06:39 debian-cd
+        drwxr-xr-x   7 ftp      ftp          4096 Nov 21 23:27 debian-security
+        drwxr-xr-x   5 ftp      ftp          4096 Oct 13  2006 ftp.irc.org
+        -rw-r--r--   1 ftp      ftp           432 Jul  9  2021 HEADER.html
+        drwxr-xr-x   5 ftp      ftp          4096 Nov 22 08:23 mint
+        drwxr-xr-x   5 ftp      ftp            49 Nov 30  2015 mint-iso
+        lrwxrwxrwx   1 ftp      ftp            33 Apr 29  2021 pub -> /var/www/html/www.kernel.org/pub/
+        drwxr-xr-x   7 ftp      ftp          4096 Nov 22 06:58 ubuntu
+        drwxr-xr-x  36 ftp      ftp          4096 Nov 22 05:47 ubuntu-cdimage
+        drwxr-xr-x  30 ftp      ftp          4096 Nov 22 01:18 ubuntu-cloudimages
+        drwxr-xr-x   7 ftp      ftp          4096 Nov 22 07:17 ubuntu-ports
+        drwxr-xr-x  15 ftp      ftp          4096 Nov 22 02:24 ubuntu-releases
+        drwxr-xr-x  24 ftp      ftp           291 Nov 22 08:01 video.fosdem.org
+        -rw-r--r--   1 ftp      ftp           390 Jul  9  2021 welcome.msg
+        drwxr-xr-x   4 ftp      ftp          4096 Jun 14  2023 www.kernel.org
+        Checking ftp-bounce.nse .....
+        Scanning >>>
+        Scanning >>>
+        Checking ftp-libopie.nse .....
+        Scanning >>>
+        Scanning >>>
+        Checking ftp-proftpd-backdoor.nse .....
+        Scanning >>>
+        Scanning >>>
+        Checking ftp-vsftpd-backdoor.nse .....
+        Scanning >>>
+        Scanning >>>     
+        ```   
+
+
+## Obtener las máquinas acticas de un segmento de red
+
+- `ICMP` se trata de un protocolo muy útil para diagnóstico de errores en la capa de red y se utiliza en herramientas tales como `TRACEROUTE` para el análisis del tráfico de un paquete por los diferentes routers por los que pasa.
+
+- El protocolo `ICMP` es un protocolo de mensajes que permite saber si una máquina determinada está disponible o no. 
+
+- Para ello deine una lista de mensajes de control para diferentes propósitos, en el caso de comando PING se utilizan los mensajes `Echo Request` y `Echo Reply`.
+
+### Ejecutar comando ping en Python
+
+- El comando `ping` utiliza un mensaje `ICMP` del tipo `Echo Request` para consultar si una máquina se encuentra activa y en el caso de que dicha máquina conteste con un `ICMP Echo Reply` dentro del tiempo fijado antes de que se obtenga el timeoyt, se entiende que la máquina está activa.
+
+- Si se obtiene un timeout durante la petición de ping se entiende que la máquina está caida o bien existe algún mecanismo de protección como un proxy que esté filtrando este tipo de mensajes.
+
+- En este caso, utilizamos el módulo `subprocess` que permite ejecutar el comando ping propio del sistema operativo.
+
+- [Código de ejemplo](/Unidad_8_Escaneo_de_puertos_y_redes_con_Python/10-ComandoPingPython.py)
+
+- Resultado:
+    ```bash
+    Scanning 195.234.45.114 
+    b'PING 195.234.45.114 (195.234.45.114) 56(84) bytes of data.\n64 bytes from 195.234.45.114: icmp_seq=1 ttl=50 time=45.2 ms\n\n--- 195.234.45.114 ping statistics ---\n1 packets transmitted, 1 received, 0% packet loss, time 0ms\nrtt min/avg/max/mdev = 45.166/45.166/45.166/0.000 ms\n'
+    La dirección IP 195.234.45.114 está activa!
+    ```
+
+    ```bash
+    Scanning 33.22.11.00 
+    b'PING 33.22.11.00 (33.22.11.0) 56(84) bytes of data.\n\n--- 33.22.11.00 ping statistics ---\n1 packets transmitted, 0 received, 100% packet loss, time 0ms\n\n'
+    La dirección IP 33.22.11.00 no está activa!
+    ```
+
+### Ejercicio: Utilizar el comando ping para determinar las máquinas acticas en un segmento de red.
+
+- [Código del ejercicio](/Unidad_8_Escaneo_de_puertos_y_redes_con_Python/11-Ejercicio_comando_ping_segmento_red.py)
+
+    ```bash
+    python3 11-Ejercicio_comando_ping_segmento_red.py --network 192.168.1 --machines 3
+
+    b'PING 192.168.1.0 (192.168.1.0) 56(84) bytes of data.\nFrom 192.168.1.36 icmp_seq=1 Destination Host Unreachable\n\n--- 192.168.1.0 ping statistics ---\n1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms\n\n'
+    La dirección IP 192.168.1.0 no está activa!
+    Scanning 192.168.1.1 
+    b'PING 192.168.1.1 (192.168.1.1) 56(84) bytes of data.\n64 bytes from 192.168.1.1: icmp_seq=1 ttl=63 time=2.17 ms\n\n--- 192.168.1.1 ping statistics ---\n1 packets transmitted, 1 received, 0% packet loss, time 0ms\nrtt min/avg/max/mdev = 2.174/2.174/2.174/0.000 ms\n'
+    La dirección IP 192.168.1.1 está activa!
+    Scanning 192.168.1.2 
+    b'PING 192.168.1.2 (192.168.1.2) 56(84) bytes of data.\nFrom 192.168.1.36 icmp_seq=1 Destination Host Unreachable\n\n--- 192.168.1.2 ping statistics ---\n1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms\n\n'
+    La dirección IP 192.168.1.2 no está activa!
+    ```
+
+    ```bash
+    python3 11-Ejercicio_comando_ping_segmento_red.py --network 192.168.18 --machines 3
+
+    Scanning 192.168.18.0 
+    b'PING 192.168.18.0 (192.168.18.0) 56(84) bytes of data.\n\n--- 192.168.18.0 ping statistics ---\n1 packets transmitted, 0 received, 100% packet loss, time 0ms\n\n'
+    La dirección IP 192.168.18.0 está activa!
+    Scanning 192.168.18.1 
+    b'PING 192.168.18.1 (192.168.18.1) 56(84) bytes of data.\n\n--- 192.168.18.1 ping statistics ---\n1 packets transmitted, 0 received, 100% packet loss, time 0ms\n\n'
+    La dirección IP 192.168.18.1 está activa!
+    Scanning 192.168.18.2 
+    b'PING 192.168.18.2 (192.168.18.2) 56(84) bytes of data.\n\n--- 192.168.18.2 ping statistics ---\n1 packets transmitted, 0 received, 100% packet loss, time 0ms\n\n'
+    La dirección IP 192.168.18.2 está activa!
+    ```
+
+## Resumen
+
+- **Nmap** como herramienta para obtener los **puertos abiertos de una determinada máquina** con el objetivo de realizar auditorías de seguridad.
+
+- Instalar y utilizar el módulo **python-nmap** con el objetivo de tener un mayor control sobre los resultados de escaneo sobre un servidor.
+
+- Utilizar la clase **PortScanner()** que contiene el método **scan()**, el cual permite lanzar un escaneo de un servidor para una determinada lista de puertos.
+
+- Lanzar el proceso de escaneo con el método **scan('ip/rango', 'puertos', 'argumentos')**, donde solo el primer parámetro es obligatorio y los demás son opcionales.
+
+- A través del método **command_line()** podemos ver el **comando que Nmap está ejecutando** por debajo.
+
+- El método **all_hosts()** nos devuelve información acerca de los **hosts o direcciones IP que están activos**.
+
+- Con el método **scaninfo()** podemos ver los servicios que han dado algún tipo de respuesta en el proceso de escaneo, así como el método de escaneo.
+
+- Utilizar la función **csv()** con el objetivo de **obtener el resultado del escaneo en un formato fácil** de tratar para recoger la información que necesitemos.
+
+- Utilizar la clase **PortScannerYield**, con la cual podemos ir obteniendo el progreso de nuestro escaneo.
+
+- Utilizar el comando Nmap con el módulo **os** (operating system) con la llamada **os.system(comando_nmap)**.
+
+- Ejecutar el comando Nmap con el módulo **subprocess** con la llamada **Popen(['nmap', '-O', 'direccion_ip'], stdin=PIPE, stdout=PIPE, stderr=PIPE)**.
+
+- **Realizar escaneos asíncronos** utilizando la clase **PortScannerAsync()**. Además, podemos definir una **función de callback** que se ejecute cada vez que Nmap disponga de un resultado para la máquina que estemos analizando.
+
+- Utilizar **NSE (Nmap Scripting Engine)** como herramienta que permite extender los tipos de escaneos que se pueden realizar e incluso realizar tareas de **detección de vulnerabilidades en los servicios**.
+
+- Lanzar los scripts de Nmap localizados en la ruta **/usr/share/nmap/scripts** utilizando el comando:
+  ```
+  $ nmap --script (categoría) (target)
+  ```
+
+- Lanzar los scripts de Nmap para un determinado objetivo utilizando el comando:
+  ```
+  $ nmap --script "ssh-*" <ip_dominio>
+  ```
+
+- **Analizar posibles vulnerabilidades sobre un servidor FTP** utilizando los scripts de Nmap relacionados con el servicio FTP. Por ejemplo, podemos comprobar si un servidor FTP permite el acceso anónimo con el comando:
+  ```
+  $ nmap -sV -p21 --script ftp-anon <dominio>
+  ```
+
+- **Obtener las máquinas activas** de un segmento de red utilizando el módulo **subprocess** ejecutando el comando **ping** para determinar si una máquina está activa, utilizando el método:
+  ```
+  Popen(['ping', direccion_ip], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+  ```
+
+
+
+### FAQ
+
+- `¿Para qué sirve nmap?`
+
+    Nmap es una herramienta para la exploración de la red y la auditoría de seguridad. Permite realizar escaneados con ping (determinando que máquinas están activas), muchas técnicas de escaneado de puertos, detección de versiones (determinando los protocolos de los servicios y las versiones de las aplicaciones que están escuchando en los puertos), e identificación mediante TCP/IP (identificando el sistema operativo de la máquina o el dispositivo)
+
+### Enlaces de interés
+
+- [Nmap](https://nmap.org/)
+
+### Bibliografía
+
+**Nmap Network Scanning: The Official Nmap Project Guide to Network Discovery and Security Scanning**
+
+
+    Nmap Network Scanning is the official guide to the Nmap Security Scanner, a free and open source utility used by millions of people for network discovery, administration, and security auditing. From explaining port scanning basics for novices to detailing low-level packet crafting methods used by advanced hackers, this book by Nmap's original author suits all levels of security and networking professionals. The reference guide documents every Nmap feature and option, while the remainder demonstrates how to apply them to quickly solve real-world tasks. Examples and diagrams show actual communication on the wire. Topics include subverting firewalls and intrusion detection systems, optimizing Nmap performance, and automating common networking tasks with the Nmap Scripting Engine. Visit http://nmap.org/book for more information and sample chapters.
+
+### Glosario
+
+- `ICMP (Internet Control Message Protocol)`
+    
+    Este protocolo se emplea para el manejo de eventos como detección de errores en la red, detección de nodos o enrutadores no operativos, congestión en la red, etc., así como también para mensajes de control como “echo request”. Un ejemplo típico del uso de este protocolo es la aplicación PING.
+
+- `Nmap (Network Mapper)`
+    
+    Es un escáner de puertos de la misma manera que el clásico comando netstat, con el cual podremos comprobar los puertos abiertos de un determinado equipo. Nmap sirve para determinar la accesibilidad del equipo, pero sin configurar el cortafuegos.
+- `Ping`
+    
+    Comando que permite mandar paquetes a una máquina para comprobar si está accesible.
+
+- `Sniffer`
+    
+    Analizador de paquetes (también conocido como analizador de red o analizador de protocolos) que se encarga de interceptar y registrar tráfico que pasa por un determinado segmento de red.
+
+- `Target`
+    
+    Un target es el objetivo de “algo”, en el contexto de este curso se ha referenciado a la palabra target como aquella aplicación, servidor o dominio que se quiere analizar.
+
+- `Time To Live (TTL)`
+    
+    El tiempo de vida de un paquete es un concepto usado en redes de computadores para indicar por cuántos nodos puede pasar un paquete antes de ser descartado por la red o devuelto a su origen.
+
+- `Traceroute`
+    
+    Comando que traza el recorrido entre routers, ofreciendo información acerca de las direcciones IPs hasta llegar en un máximo de saltos a la máquina destino.
