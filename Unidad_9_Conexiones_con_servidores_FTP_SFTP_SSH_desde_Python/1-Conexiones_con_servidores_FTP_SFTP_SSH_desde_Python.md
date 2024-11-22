@@ -231,3 +231,274 @@
 
 ### Proceso de fuerza bruta para conectarnos a un servidor FTP
 
+- Uno de los principales ussos que se le puede dar a esta librería es la de comprobar si algún servidor FTP es vulnerable a un ataque de fuerza bruta mediante diccionario o sopota la autenticación anónima.
+
+- Sabremos que la conbinaciónm es la buena cuando al conectarnos obtenemos como respuesta la cadena `230 Anonymous access granted` o `230 Login access successful`.
+
+- El módulo `ftplib` también lo podemos utilizar para crear un scripts que automatizan determinadas tareas o realizan ataques de diccionario contra un servidor FTP.
+
+- Uno de los principales casos de uso que podemos implementar es verificar si un servidor FTP es vulnerable a un ataque de fuerza burta usando un diccionario.
+
+- Por ejemplo, con el siguiente script podemos ejecutar un proceso de fuerza utilizando un diccionario de usuarios y contraseñas contra un servidor FTP.
+
+- El objetivo es probar con todas las combinaciones posibles de usuario y contraseña hasta encontrar una con la cual establecer la conexión.
+
+- En primera instancia **obtenemos la dirección del servidor FTP con el comando nslookup:**
+
+    ```bash	
+    nslookup ftp.be.debian.org
+    Server:         10.255.255.254
+    Address:        10.255.255.254#53
+
+    Non-authoritative answer:
+    Name:   ftp.be.debian.org
+    Address: 195.234.45.114
+    Name:   ftp.be.debian.org
+    Address: 2a05:7300:0:100:195:234:45:114
+    ```
+
+- [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/7-Fuerza_Bruta.py)
+
+    - Aquí estamos usando la función `fuerza_bruta()`para verificar cada combinación de nombre de ususario y contraseña que estamos leyendo de 2 archivos de texto llamados `usuarios.txt` y `passwords.txt`.
+
+    ```bash
+    $ python3 ftp_fuerza_bruta.py
+    Introduce IP de un servidor FTP:195.234.45.114
+    [*] Intentando conectar con el servidor FTP
+    Error en el proceso de fuerza bruta con usuario usuario1
+    y password usuario1
+
+    [*] Intentando conectar con el servidor FTP
+    Error en el proceso de fuerza bruta con usuario usuario1
+    y password usuario2
+
+    [*] Intentando conectar con el servidor FTP
+    Error en el proceso de fuerza bruta con usuario usuario1
+    y password anonymous
+
+    [*] Intentando conectar con el servidor FTP
+    Error en el proceso de fuerza bruta con usuario admin
+    y password usuario1
+
+    [*] Intentando conectar con el servidor FTP
+    Error en el proceso de fuerza bruta con usuario admin
+    y password usuario2
+
+    [*] Intentando conectar con el servidor FTP
+    Error en el proceso de fuerza bruta con usuario admin
+    y password anonymous
+
+    [*] Intentando conectar con el servidor FTP
+    230-Welcome to mirror.as35701.net.
+    230-
+
+    230-The server is located in Brussels, Belgium.
+    230-
+
+    230-Server connected with gigabit ethernet to the internet.
+    230-
+    230-The server maintains software archive accessible via ftp, http, https and rsync.
+    230-
+
+    230-ftp.be.debian.org is an alias for this host, but https will not work with that
+    230-alias. If you want to use https use mirror.as35701.net.
+    230-
+
+    230-Contact: kurt@roeckx.be
+    230-
+
+    230 Anonymous access granted, restrictions apply
+    [*]Ataque fuerza bruta
+    Usario: anonymous
+    Password: usuario1
+    ```
+
+    - En la salida anterior podemos ver cómo estamos probando todas las combinaciones posibles de usuario y contraseña hasta encontrar la correcta. Sabremos que la combinación es buena si, al intentar conectarnos, obtenemos en la respuesta el código 230 y la cadena `access granted`.
+
+
+## Conexión con servidores SSH utilizando el módulo `paramiko`
+
+- `Paramiko` es una librería escrita en Python que soporta los procolos SSHV1 y SSHV2, permitiendo la creación de clientes y realizar conexiones a servidores SSH.
+
+- Depende de la libería `pycrypto` para todas las operaciones de cifrado y permite la creación de túneles cifrados locales, remotos y dinámicos.
+
+- Principales ventajas de esta librería son:
+    - Permite encapsular las dificultades que implica realizar scripts automatizados contra servidores SSH de una forma cómoda y fácil de entender para cualquier programador.
+
+    - Soporta protocolo SSH2 por medio de la librería `PyCrypto`, que la emplea para implementar todos aquellos detalles de criptogracía de clave pública y privada.
+
+    - Permite autenticación por clave pública, autenticación mediante password, creación de túneles SSH y mucho más.
+
+    - Nos permite escribir clientes SSH robusstos con las mismas funcionalidades que tienen otros clientes SSH como PuTTY u OpenSSH-Client.
+
+    - Soporta transferencia de ficheros de forma segura utilizando el protocolo SFTP.
+
+- En Python se importa el módulo paramiko y la clase más importante es `SSHClient`.
+
+### Hay varias formas de conectarnos a un servidor SSH con `paramiko`:
+---
+**NOTA: Comandos utilizados para poder probar los scripts siguientes:**
+```bash
+# Instalar el servidor SSH
+sudo apt-get install openssh-server
+# Activar el servicio SSH
+sudo systemctl start ssh
+# Comprobar el estado del servicio SSH
+sudo systemctl status ssh
+# Parar el servicio SSH
+sudo systemctl stop ssh
+```
+---
+
+#### La primera es a través de la clase `SSHCliente()`
+- Proporciona un objeto sobre el cual disponemos para conectarnos a un determinado host introduciendo las credenciales de usuario y contraseña.
+
+    - [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/8-Conexion_SSH_paramiko.py)
+
+        - Si al ejecutar el script no consigue establecer la conexión, entonces lanzara la excepción `Error al conectar: Authentication failed`.
+
+- **Ejecutar comandos con paramiko**
+
+    - La clase `SSHClient` del módulo `paramiko`nos ofrece la posibilidad, además de conectarnos con un servidor SSH, de poder ejecutar comandos sobre dicho servidor.
+
+    - Para ello, podemos utilizar el método `exec_command()` que nos permite ejecutar comandos en el servidor remoto.
+
+    - El siguiente script trata de establecer una conexión con el servidor SSH que se encuentra en la máquina local y si la conexión ha sido `ok` lanza el comando `uname -a` que permite obtener la versión del kernel y del sistema operativo.
+
+    - [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/9-Conexion_SSH_paramiko_exec_command.py)
+
+        - Resultado:
+
+            ```bash
+            Creando conexión
+            Conectado
+            Linux PS 5.15.167.4-microsoft-standard-WSL2 #1 SMP Tue Nov 5 00:21:55 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux
+            Cerrando conexión
+            ```
+
+- **Ejercicio: Script que permite ejecutar un comando en un servidor SSH.**
+
+    - [Código del ejercicio](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/10-Conexion_SSH_paramiko_comando.py)
+
+
+#### Otra forma: Conexión con la clase `Transport`
+
+- Otra forma de conectarnos a un servidor SSH es mediante la clase `Transport` que proporciona otro tipo de objeto para poder autenticarnos contra el servidor.
+
+- Podemos consultar la ayuda de la clase `Transport` para ver los métodos disponibles:
+
+    ```bash
+    $ python3
+    >>> import paramiko
+    >>> help(paramiko.Transport)
+    ```
+
+- Esta clase proporciona el método `auth_password()` para autenticarnos con el servidor SSH a partir del usuario y contraseña.
+
+- [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/11-Conexion_SSH_paramiko_transport.py)
+
+    - Resultado:
+
+        ```bash
+        Creando conexión con la clase Transport
+        Conectado y autenticado en el servidor SSH en el host localhost
+        Cerrando conexión
+        ```
+    
+- La clase `Transport` nos ofrece la posibilidad, además de conectarnos con un servidor SSH, de poder ejecutar comandos sobre dicho servidor.
+
+- Para ello podemos utilizar el método `exec_command()` que nos permite ejecutar comandos en el servidor remoto, pero la principal diferencia con respecto al caso anterior es que tenemos que utilizar el método open_session() para iniciar una sesión SSH y ejecutar el comando.
+
+    - [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/12-Conexion_SSH_paramiko_transport_comando.py)
+
+    ```bash
+    Creando conexión con la clase Transport
+    Conectado y autenticado al servidor SSH en el host localhost
+    Detalles del host remoto conectado: ('127.0.0.1', 22)
+    Comando 'uname -a'/('<usuario>') --> Linux PS 5.15.167.4-microsoft-standard-WSL2 #1 SMP Tue Nov 5 00:21:55 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux
+
+    Cerrando conexión
+    ```
+
+- **Ejercicio: Script que pemite ejecutar un comando en un servidor SSH con clase `Transport`.**
+
+    - [Código del ejercicio](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/13-Conexion_SSH_paramiko_transport_comando_ejercicio.py)
+
+
+
+### Tratamiento de excepciones
+
+- Al intentar conectarnos con el servidor SSH se podría producir errores relacionados con la conexión o con la autenticación.
+
+- Para controlar estos errores podríamos añadir una gestión de excepciones que podemos personalizar para estos casos.
+
+- El siguiente script trata de establecer una conexión con el servidor SSH que se encuentra en la máquina local en el puerto 22.
+
+    - Si la conexión ha sido `ok` obtenemos los algoritmos de cifrado soportados por el servidor a través del método `transport.get_security_options()` y accediendo a la propiedad `ciphers`.
+
+    - [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/14-Conexion_SSH_paramiko_excepciones.py)
+
+        - Resultado:
+            ```bash
+            # Conexión fallida
+            socketError: [Errno None] Unable to connect to port 22 on 127.0.0.1
+            Cerrando conexión
+            ```	
+
+            ```bash
+            # Conexión exitosa, autenticación errónea
+            DEBUG:paramiko.transport:starting thread (client mode): ...
+            DEBUG:paramiko.transport:Local version/idstring: ...
+            DEBUG:paramiko.transport:Remote version/idstring: ...
+            INFO:paramiko.transport:Connected (version 2.0, client ...)
+            DEBUG:paramiko.transport:=== Key exchange possibilities ===
+            DEBUG:paramiko.transport:kex algos: ...
+            DEBUG:paramiko.transport:server key: ...
+            DEBUG:paramiko.transport:client encrypt: ...
+            DEBUG:paramiko.transport:server encrypt: ...
+            DEBUG:paramiko.transport:client mac: ...
+            DEBUG:paramiko.transport:server mac: ...
+            DEBUG:paramiko.transport:client compress: ...
+            DEBUG:paramiko.transport:server compress: ...
+            DEBUG:paramiko.transport:client lang: ...
+            DEBUG:paramiko.transport:server lang: ...
+            DEBUG:paramiko.transport:kex follows: ...
+            DEBUG:paramiko.transport:=== Key exchange agreements ===
+            DEBUG:paramiko.transport:Strict kex mode: ...
+            DEBUG:paramiko.transport:Kex: ...
+            DEBUG:paramiko.transport:HostKey: ...
+            DEBUG:paramiko.transport:Cipher: ...
+            DEBUG:paramiko.transport:MAC: ...
+            DEBUG:paramiko.transport:Compression: ...
+            DEBUG:paramiko.transport:=== End of kex handshake ===
+            DEBUG:paramiko.transport:Resetting outbound seqno after NEWKEYS due to strict mode
+            DEBUG:paramiko.transport:kex engine KexCurve25519 specified hash_algo ...
+            DEBUG:paramiko.transport:Switch to new keys ...
+            DEBUG:paramiko.transport:Resetting inbound seqno after NEWKEYS due to strict mode
+            ...
+            DEBUG:paramiko.transport:Agreed upon 'rsa-sha2-512' pubkey algorithm
+            INFO:paramiko.transport:Authentication (publickey) failed.
+            DEBUG:paramiko.transport:userauth is OK
+            INFO:paramiko.transport:Authentication (password) failed.
+            SSHException: Authentication failed.
+            Cerrando conexión
+
+            ```	
+
+            ```bash
+            # Conexión exitosa
+            ...
+            DEBUG:paramiko.transport:Agreed upon 'rsa-sha2-512' pubkey algorithm
+            INFO:paramiko.transport:Authentication (publickey) failed.
+            DEBUG:paramiko.transport:userauth is OK
+            INFO:paramiko.transport:Authentication (password) successful!
+            Conectado con el host en el puerto 22
+            ...
+            ```
+
+
+    - Vemos como ha saltado la expción correspondiente a  autenticación errónea correspondiente a la excepción `paramiko.SSHException`    .
+    - En la salida también vemos información de debut de paramiko al añadir la línea `paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)` para poder ver el registro de la conexión.
+
+
+## Operaciones sobre archivos mediante el cliente SFTP
