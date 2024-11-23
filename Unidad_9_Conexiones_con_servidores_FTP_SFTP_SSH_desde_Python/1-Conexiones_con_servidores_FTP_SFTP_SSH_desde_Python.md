@@ -347,6 +347,10 @@ sudo systemctl start ssh
 sudo systemctl status ssh
 # Parar el servicio SSH
 sudo systemctl stop ssh
+
+sudo systemctl disable sshd
+sudo systemctl enable sshd
+
 ```
 ---
 
@@ -502,3 +506,173 @@ sudo systemctl stop ssh
 
 
 ## Operaciones sobre archivos mediante el cliente SFTP
+
+
+- El cliente SFTP de `paramiko` proporciona los mismo métodos que un cliente FTP normal. Todos los métodos se pueden consultar desde la documentación oficial:
+
+    - https://docs.paramiko.org/en/3.3/api/sftp.html
+
+- Entre los métodos proporcionados por el cliente SFTP, podemos encontrar:
+
+    - `get(remote, local):` Permite obtener un fichero remoto a un directorio local
+    - `put(local, remote):` Permite subir un fichero local a un directorio remoto
+    - `chdir(path):` Permite cambiar el directorio de trabajo actual.
+    - `chmod(path,mode):` Permite cambiar permisos en un archivo.
+    - `mkdiR(paht, mode=511):` Permite crear un directorio.
+    - `rename(old,new):` Permite cambiar el nombdre de un archivo o directorio.
+    - `remove(file):` Permite eliminar un archivo.
+    - `remidr(path):` Permite eleiminar un directorio.
+
+- EL siguiente script trata de establecer una conexión con el servidor SSH que se encuentra en la máquina local y si la conexión ha sido `ok`, utiliza el cliente sftp de paramiko para obtener un listado de directorios del directorio sobre el cual se ejecuta el script.
+
+- EN este caso estamos utilizando el método `open_sftp()` para obtener el cliente SFTP y posteriormente utilizamos el método `listdir()` para obtener la lista de directorios.
+
+- [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/15-Conexion_SSH_paramiko_sftp.py)
+
+    - Resultado (ejemplo):
+
+        ```bash
+        SSH Client connected to localhost.
+        SFTP session established with localhost.
+        Files in the remote directory: ['.bash_history', '.bashrc', '.cache', '.config', '.gitconfig', '.local', '.profile', '.ssh', '.viminfo', '.vimrc', '.vscode', 'Desktop', 'Documents', 'Downloads', 'Music', 'Pictures', 'Public', 'Templates', 'Videos', '.bash_logout', '.bash_profile', '.cache', '.config', '.gitconfig', '.local', '.profile', '.ssh', '.viminfo', '.vimrc', '.vscode', 'Desktop', 'Documents', 'Downloads', 'Music', 'Pictures', 'Public', 'Templates', 'Videos', '.bash_logout', '.bash_profile', '.cache', '.config', '.gitconfig', '.local', '.profile', '.ssh', '.viminfo', '.vimrc', '.vscode', 'Desktop', 'Documents', 'Downloads', 'Music', 'Pictures', 'Public', 'Templates', 'Videos']
+        SSH Client disconnected.
+        ```
+
+### Descarga de ficheros mediante el cliente SFTP
+
+- Podríamos utilizar el módulo `paramiko` para obtener una sesion FTP y descargar un fichero de un servidor de forma segura.
+
+- El siguiente script trata de establecer una conexión con el servidor SSH que se encuentra en la máquina local y utiliza el cliente SFTP de paramiko para descargar un fichero en el directorio sobre el cuál se ejecuta el script. En este caso estamos utilizando el método `get(remote, local)` que permite obtener un fichero remoto a un directorio local.
+
+- [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/16-Conexion_SSH_paramiko_sftp_get.py)
+
+
+### Acceder a un servidor SFTP utilizando el módulo `PySftp`
+
+- `PySftp` es un módulo que actúa a modo de wrapper de la librería `Paramiko`.
+
+- Los méetodos que ofrece PySftp son abstracciones que le permiten a un desarrollador trabajar más rápido encapsulando muchas de las funciones que se necesitan par ainteractuar con un servidor SFTP.
+
+    - https://pysftp.readthedocs.io/en/release_0.2.9/
+
+- Se trata de un módulo que expone ciertas características de alto nivel basadas en Paramico, entre las que podemos desctacar la transferencia de ficheros de manera recursiva.
+
+- PAra instalar el módulo `PySftp` podemos hacerlo mediante el siguiente comando:
+
+    ```bash
+    $ pip install pysftp
+    ```
+
+- Por ejemplo, podríamos listar el contenido de un directorio usando el siguiente código.
+
+    - Despues de abrir una conexión, necesitas cambiar de directorio usando ya el método `chdir()` o `cwd()` y pasando como primer argumento la dirección del directorio remoto.
+
+    - [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/17-Conexion_SSH_PySftp_listdir.py)
+
+        - En el script se decuelve un objeto SFTPAttributes por cada archivo/directorio que encuentra en el directorio remoto.
+            - [SFTPAttributes](https://docs.paramiko.org/en/3.3/api/sftp.html#paramiko.sftp_attr.SFTPAttributes)
+
+        - En la salida vemos como el objeto retornado contien un campo llamado `longname` que contiene información detallada del archivo/directorio (una cadena con los atributos de los achivos en formato unix).
+
+        - El contenido de esta cadena dependerá del servidor SFTP y de los permisos que tenga cada archivo/directorio.
+
+### Descarga de un fichero utilizando el módulo `PySftp`
+
+- Con el objetivo de descargar un archivo remoto, podríamos usar el método `get()` que espera como primer argumento el nombre del directorio del archivo que va a ser descargado y como segundo el directorio local donde se guardará el archivo descargado.
+
+- [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/18-Conexion_SSH_PySftp_getfile.py)
+
+    - En el script anterior, accedemos al directorio que encuentra en la ruta /temp/test_sftp.txt del servidor y lo guardamos en el directorio local en el fichero test_sftp.txt.
+
+
+## Proceso de fuerza bruta contra un servidor SSH
+
+- Podríamos utilizar el módulo `paramiko`para realizar un proceso de fuerza bruta a partir de un fichero de usuarios y passwords que podríamos probar realizando combinaciones.
+
+- En este ejemplo, implementamos la clase `SSHConnection` que permite inicializar el objeto `SSHClient` e implementamos los siguientes métodos:
+
+    - `def conexion_ssh(self,ip,username,password,code=0)`: Método que intenta realizar la conexión a una determinada ip con el usuario y contraseña proporcionados.
+
+    - `def fuerza_bruta_SSH(self, host)`: Método que toma como entrada dos ficheros de lectura (usuarios.txt y passwords.txt) y mediante una proceso de fuerza bruta, intenta probar todas las combinaciones posibles de usuario y contraseña que va leyendo de los ficheros. Probamos con una combinación de usuario y contraseña, si consigue establecer conexión, ejecutamos un comando desde la consala del servidor al cual nos hemos conectado.
+
+- [Código de ejemplo](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/19-Conexion_SSH_paramiko_fuerza_bruta.py)
+
+    - Destacar que si la conexión falla, tenemos un bloque exception donde realizamos un tratamiento distinto dependiendo de si la conexión ha fallado por un error de autenticación (`paramiko.AythenticationException`) o por un error de conexión con el servidor (`socket.error`).
+
+    - Posteriormente vamos probando las diferente combinaciones de usuario y paswword hasta encontrar aquella combinación que nos permita conectarnos al servidor.
+
+    - Por último, ejecutamos el comando `ifconfig` para obtener la configuración de red sel servidor SSH.
+
+    - **Repositorio con ficheros de usuarios y passwords**: 
+        - https://github.com/fuzzdb-project/fuzzdb/tree/master/wordlists-user-passwd/unix-os
+
+#### Ejercicio: Script que permite realizar un ataque por diccionario contra un servidor SSH.
+
+- [Código del ejercicio](/Unidad_9_Conexiones_con_servidores_FTP_SFTP_SSH_desde_Python/20-Conexion_SSH_paramiko_fuerza_bruta_ejercicio.py)
+
+
+## Resumen
+
+### Conexiones con Servidores FTP
+- Realizar conexiones con servidores FTP utilizando el módulo `ftplib`, empleando los métodos:
+  - `connect(host, port, timeout)`
+  - `login(user, pass)` de la clase FTP.
+- Enumerar los archivos disponibles en un servidor FTP usando los métodos:
+  - `dir()`
+  - `nlst()`.
+- Conectar con un servidor FTP **anónimo** y descargar archivos binarios sin usuario ni contraseña, utilizando el usuario `anonymous`.
+- Descargar ficheros de un servidor FTP utilizando los métodos:
+  - `retrbinary()`
+  - `retrlines()`.
+
+### Fuerza Bruta en Servidores FTP
+- Implementar un proceso de fuerza bruta para conectarse con un servidor FTP utilizando dos archivos de texto:
+  - `usuarios.txt`
+  - `passwords.txt`.
+  Estos se usarán como diccionarios de datos para probar combinaciones.
+
+### Conexiones con Servidores SSH
+- Realizar conexiones con servidores SSH utilizando el módulo `paramiko` y la clase `SSHClient()`, empleando el método:
+  - `sshClient.connect(host, username=username, password=password)`.
+- Ejecutar comandos en el servidor SSH con `paramiko`, usando el método:
+  - `exec_command('comando_a_ejecutar')`.
+
+### Conexiones SSH Avanzadas
+- Utilizar el módulo `paramiko` con la clase `Transport()` para realizar conexiones SSH avanzadas, empleando los métodos:
+  - `sshTransport.start_client()`
+  - `sshTransport.auth_password(username=username, password=password)`.
+
+### Manejo de Excepciones
+- Implementar el tratamiento de excepciones al intentar conectarse con el servidor SSH para manejar errores comunes como autenticación o fallos en la conexión.
+
+### Cliente SFTP con `paramiko`
+- Realizar operaciones sobre archivos mediante el cliente SFTP de `paramiko`:
+  - Usar el método `open_sftp()` para obtener el cliente SFTP.
+  - Utilizar el método `listdir()` para obtener la lista de directorios.
+- Descargar ficheros con el cliente SFTP utilizando el método:
+  - `get(remote, local)` que permite descargar un fichero remoto a un directorio local.
+
+
+### Enlaces de interés
+
+- https://www.paramiko.org/
+
+- https://pysftp.readthedocs.io/en/release_0.2.9/
+
+- https://docs.python.org/3/library/ftplib.html
+
+### Glosario
+
+- `FTP`
+
+    Protocolo de red para la transferencia de archivos entre sistemas conectados a una red TCP, basado en la arquitectura cliente servidor.
+- `Servidor`
+
+    Computadora que presta servicios a otras computadoras, como el procesamiento de comunicaciones, almacenamiento de archivos y acceso a impresoras. Los servidores incluyen entre otros: web, base de datos, aplicaciones, autenticación, DNS, correo, FTP
+- `SFTP`
+
+    Protocolo que permite la transferencia de datos cifrados con el servidor FTP a través de Secure Shell (SSH).
+- `SSH`
+
+    Protocolo cuya principal función es el acceso remoto a un servidor por medio de un canal seguro en el que toda la información está cifrada
+
